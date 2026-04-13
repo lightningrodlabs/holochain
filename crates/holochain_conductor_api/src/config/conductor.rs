@@ -39,6 +39,16 @@
 //!       { "urls": ["stun:stun.l.google.com:19302"] }
 //!     ]
 //!   }
+//!
+//!   ## OPTIONAL: Route all networking over Reticulum instead of
+//!   ## iroh / tx5. Requires the `transport-reticulum` feature. When
+//!   ## set, `bootstrap_url`, `signal_url`, and `relay_url` are
+//!   ## ignored (peer discovery is announce-driven).
+//!   #reticulum:
+//!   #  interfaces:
+//!   #    - type: tcp_client
+//!   #      target: "127.0.0.1:4242"
+//!   #  identity_path: /path/to/reticulum.identity
 //! "#;
 //!
 //!use holochain_conductor_api::conductor::ConductorConfig;
@@ -70,6 +80,8 @@ pub mod process;
 pub use super::*;
 pub use error::*;
 pub use keystore_config::KeystoreConfig;
+#[cfg(feature = "kitsune2_transport_reticulum")]
+pub use kitsune2_transport_reticulum::{ReticulumInterfaceConfig, ReticulumTransportConfig};
 
 /// All the config information for the conductor
 #[derive(Clone, Deserialize, Serialize, Debug, PartialEq, JsonSchema)]
@@ -301,6 +313,17 @@ pub struct NetworkConfig {
     #[schemars(schema_with = "holochain_util::jsonschema::url2_schema")]
     pub relay_url: url2::Url2,
 
+    /// Reticulum transport configuration.
+    ///
+    /// Only consulted when the `transport-reticulum` feature is enabled.
+    /// When set, the conductor will run all networking over Reticulum
+    /// instead of the iroh / tx5 transports, and `bootstrap_url`,
+    /// `signal_url`, and `relay_url` are ignored (Reticulum uses
+    /// announce-driven peer discovery).
+    #[cfg(feature = "kitsune2_transport_reticulum")]
+    #[serde(default)]
+    pub reticulum: Option<ReticulumTransportConfig>,
+
     /// The amount of time, in seconds, to elapse before a request-response roundtrip times out.
     ///
     /// This value defaults to 60 seconds.
@@ -364,6 +387,8 @@ impl Default for NetworkConfig {
             bootstrap_url: url2::Url2::parse("https://dev-test-bootstrap2.holochain.org"),
             signal_url: url2::Url2::parse("wss://dev-test-bootstrap2.holochain.org"),
             relay_url: url2::Url2::parse("https://use1-1.relay.n0.iroh-canary.iroh.link./"),
+            #[cfg(feature = "kitsune2_transport_reticulum")]
+            reticulum: None,
             request_timeout_s: default_request_timeout_s(),
             webrtc_config: None,
             target_arc_factor: default_target_arc_factor(),
@@ -409,6 +434,8 @@ impl std::fmt::Debug for NetworkConfig {
         s.field("bootstrap_url", &self.bootstrap_url);
         s.field("signal_url", &self.signal_url);
         s.field("relay_url", &self.relay_url);
+        #[cfg(feature = "kitsune2_transport_reticulum")]
+        s.field("reticulum", &self.reticulum);
         s.field("request_timeout_s", &self.request_timeout_s);
         s.field("webrtc_config", &self.webrtc_config);
         s.field("target_arc_factor", &self.target_arc_factor);
@@ -566,6 +593,16 @@ impl NetworkConfig {
                 "relayUrl",
                 serde_json::Value::String(self.relay_url.as_str().into()),
             )?;
+
+            #[cfg(feature = "kitsune2_transport_reticulum")]
+            if let Some(reticulum) = &self.reticulum {
+                let reticulum_value = serde_json::to_value(reticulum).map_err(|e| {
+                    ConductorConfigError::InvalidNetworkConfig(format!(
+                        "failed to serialize reticulum config: {e}"
+                    ))
+                })?;
+                module_config.insert("reticulumTransport".into(), reticulum_value);
+            }
         } else {
             return Err(ConductorConfigError::InvalidNetworkConfig(
                 "advanced field must be an object".to_string(),
@@ -772,6 +809,10 @@ fn kitsune2_config_schema(generator: &mut schemars::SchemaGenerator) -> Schema {
         tx5_transport: Option<kitsune2_transport_tx5::Tx5TransportModConfig>,
         #[serde(flatten)]
         iroh_transport: Option<kitsune2_transport_iroh::IrohTransportModConfig>,
+        #[cfg(feature = "kitsune2_transport_reticulum")]
+        #[serde(flatten)]
+        reticulum_transport:
+            Option<kitsune2_transport_reticulum::ReticulumTransportModConfig>,
     }
 
     let schema = schemars::schema_for!(Option<K2Config>);
@@ -800,6 +841,37 @@ mod tests {
     use matches::assert_matches;
     use std::path::Path;
     use std::path::PathBuf;
+
+    #[cfg(feature = "kitsune2_transport_reticulum")]
+    #[test]
+    fn reticulum_config_round_trips_through_to_k2_config() {
+        let mut network = NetworkConfig::default();
+        network.reticulum = Some(ReticulumTransportConfig {
+            interfaces: vec![ReticulumInterfaceConfig::TcpClient {
+                target: "127.0.0.1:4242".into(),
+            }],
+            identity_path: None,
+            max_frame_bytes: 65536,
+            connect_timeout_s: 30,
+            announce_interval_s: 300,
+            link_idle_timeout_s: 600,
+        });
+
+        let k2 = network.to_k2_config().unwrap();
+        let module = k2
+            .as_object()
+            .unwrap()
+            .get("reticulumTransport")
+            .expect("reticulumTransport block missing");
+        assert_eq!(
+            module
+                .get("interfaces")
+                .and_then(|v| v.as_array())
+                .map(Vec::len),
+            Some(1)
+        );
+        assert_eq!(module.get("maxFrameBytes").and_then(|v| v.as_u64()), Some(65536));
+    }
 
     #[test]
     fn config_load_yaml() {

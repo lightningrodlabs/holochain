@@ -7,6 +7,17 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## Unreleased
 
+- Add opt-in `transport-reticulum` feature, which routes all kitsune2
+  traffic over a [Reticulum](https://reticulum.network/) network instead
+  of iroh / tx5. When enabled, configure the transport via the new
+  `network.reticulum` block in `ConductorConfig`; the existing
+  `bootstrap_url`, `signal_url`, and `relay_url` settings are ignored
+  because Reticulum uses announce-driven peer discovery. The default
+  transport remains iroh. Note: rendezvous-style sweettest infrastructure
+  (`SweetLocalRendezvous`) is gated out under this feature; multi-conductor
+  reticulum tests will land in a follow-up.
+- Update kitsune2 dependencies to `0.5.0-dev.0`.
+
 ## 0.6.1-rc.7
 
 - Update kitsune2 dependencies to `0.4.0-dev.10`.

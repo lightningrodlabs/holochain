@@ -82,15 +82,18 @@ opt-level = "z"
 lto = true
 
 [patch.crates-io]
-# kitsune2_api = { path = "../kitsune2/crates/api" }
-# kitsune2_core = { path = "../kitsune2/crates/core" }
-# kitsune2 = { path = "../kitsune2/crates/kitsune2" }
-# kitsune2_dht = { path = "../kitsune2/crates/dht" }
-# kitsune2_gossip = { path = "../kitsune2/crates/gossip" }
-# kitsune2_bootstrap_srv = { path = "../kitsune2/crates/bootstrap_srv" }
-# kitsune2_bootstrap_client = { path = "../kitsune2/crates/bootstrap_client" }
-# kitsune2_test_utils = { path = "../kitsune2/crates/test_utils" }
-# kitsune2_transport_tx5 = { path = "../kitsune2/crates/transport_tx5" }
+kitsune2_api = { path = "../kitsune2-lrl/crates/api" }
+kitsune2_core = { path = "../kitsune2-lrl/crates/core" }
+kitsune2 = { path = "../kitsune2-lrl/crates/kitsune2" }
+kitsune2_dht = { path = "../kitsune2-lrl/crates/dht" }
+kitsune2_gossip = { path = "../kitsune2-lrl/crates/gossip" }
+kitsune2_bootstrap_srv = { path = "../kitsune2-lrl/crates/bootstrap_srv" }
+kitsune2_bootstrap_client = { path = "../kitsune2-lrl/crates/bootstrap_client" }
+kitsune2_test_utils = { path = "../kitsune2-lrl/crates/test_utils" }
+kitsune2_transport_tx5 = { path = "../kitsune2-lrl/crates/transport_tx5" }
+kitsune2_transport_iroh = { path = "../kitsune2-lrl/crates/transport_iroh" }
+kitsune2_transport_reticulum = { path = "../kitsune2-lrl/crates/transport_reticulum" }
+reticulum-rs-transport = { git = "https://github.com/lightningrodlabs/LXMF-rs", branch = "bump-rusqlite-0.37" }
 # sbd-server = { path = "../sbd/rust/sbd-server" }
 # sbd-client = { path = "../sbd/rust/sbd-client" }
 # sbd-e2e-crypto-client = { path = "../sbd/rust/sbd-e2e-crypto-client" }

@@ -30,7 +30,7 @@ thiserror = "2.0"
 tracing = "0.1"
 opentelemetry = "0.31"
 
-kitsune2_api = "0.4.0-dev.10"
+kitsune2_api = "0.5.0-dev.0"
 
 async-trait = "0.1"
 mockall = { version = "0.13", optional = true }
@@ -76,5 +76,6 @@ sqlite = [
 ]
 
 transport-iroh = ["holochain_p2p/transport-iroh"]
+transport-reticulum = ["holochain_p2p/transport-reticulum"]
 
 transport-tx5-backend-go-pion = ["holochain_p2p/transport-tx5-backend-go-pion"]

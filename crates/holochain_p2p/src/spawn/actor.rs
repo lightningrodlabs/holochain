@@ -501,11 +501,29 @@ impl HolochainP2pActor {
     ) -> HolochainP2pResult<actor::DynHcP2p> {
         check_k2_init();
 
+        // When the reticulum transport is enabled, build a ReticulumNode from
+        // the user's network config and use kitsune2::reticulum_builder.
+        // Otherwise fall back to the default builder (iroh / tx5).
+        #[cfg(feature = "transport-reticulum")]
+        let mut builder = {
+            let reticulum_config =
+                Self::extract_reticulum_config(config.network_config.as_ref())?;
+            let node = kitsune2_transport_reticulum::ReticulumNode::from_config(
+                reticulum_config,
+            )
+            .await
+            .map_err(HolochainP2pError::K2Error)?;
+            kitsune2::reticulum_builder(node)
+        };
+        #[cfg(not(feature = "transport-reticulum"))]
         let mut builder = kitsune2::default_builder();
 
         // The following are flags only used in tests
         #[cfg(feature = "test_utils")]
         {
+            // Reticulum has no bootstrap server / mem-bootstrap concept --
+            // peer discovery is announce-driven.
+            #[cfg(not(feature = "transport-reticulum"))]
             if config.disable_bootstrap {
                 builder.bootstrap = Arc::new(test::NoopBootstrapFactory);
             } else if config.mem_bootstrap {
@@ -639,6 +657,32 @@ impl HolochainP2pActor {
                 config.incoming_request_concurrency_limit as usize,
             )),
         }))
+    }
+
+    /// Extract the [`ReticulumTransportConfig`] from the user-supplied
+    /// kitsune2 network config JSON.
+    ///
+    /// Returns an error if no `reticulumTransport` block is present, since
+    /// the reticulum transport cannot start without an interface list.
+    #[cfg(feature = "transport-reticulum")]
+    fn extract_reticulum_config(
+        network_config: Option<&serde_json::Value>,
+    ) -> HolochainP2pResult<kitsune2_transport_reticulum::ReticulumTransportConfig> {
+        use kitsune2_transport_reticulum::ReticulumTransportModConfig;
+
+        let value = network_config.ok_or_else(|| {
+            HolochainP2pError::other(
+                "transport-reticulum feature is enabled but no network config was provided"
+                    .to_string(),
+            )
+        })?;
+        let mod_config: ReticulumTransportModConfig = serde_json::from_value(value.clone())
+            .map_err(|e| {
+                HolochainP2pError::other(format!(
+                    "failed to deserialize reticulumTransport from network config: {e}"
+                ))
+            })?;
+        Ok(mod_config.reticulum_transport)
     }
 
     /// Extract Kitsune2 [`Config`] from a [`serde_json::Value`].

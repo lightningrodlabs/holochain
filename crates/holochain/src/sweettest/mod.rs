@@ -19,6 +19,11 @@ mod sweet_cell;
 mod sweet_conductor;
 mod sweet_conductor_batch;
 mod sweet_conductor_config;
+// SweetLocalRendezvous spawns iroh/tx5 bootstrap + relay servers; the
+// reticulum transport has no equivalent rendezvous concept (peer
+// discovery is announce-driven), so this module is gated out when the
+// reticulum feature is active.
+#[cfg(not(feature = "transport-reticulum"))]
 mod sweet_conductor_config_rendezvous;
 mod sweet_conductor_handle;
 pub mod sweet_consistency;
@@ -32,6 +37,7 @@ pub use sweet_cell::*;
 pub use sweet_conductor::*;
 pub use sweet_conductor_batch::*;
 pub use sweet_conductor_config::*;
+#[cfg(not(feature = "transport-reticulum"))]
 pub use sweet_conductor_config_rendezvous::*;
 pub use sweet_conductor_handle::*;
 pub use sweet_consistency::*;
