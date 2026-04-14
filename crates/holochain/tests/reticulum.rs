@@ -17,38 +17,19 @@ use holochain_conductor_api::conductor::{
 };
 use holochain::conductor::ConductorBuilder;
 
-/// Blocked on two k2-side issues found while bringing this up:
+/// End-to-end: two `SweetConductor`s gossip a committed entry over
+/// an in-process `rns_transport` loopback bridge. Passes in ~2-3s.
 ///
-/// 1. **Preflight race on fresh inbound links.** When A's preflight +
-///    first data frame arrive on B's data-router task *before* B's
-///    links-router task has run `start_preflight` (which flips
-///    `PeerState.preflight_state.local_sent`), the data frame is
-///    dropped with `"data frame before preflight ready -- dropping"`.
-///    The `route_links` handler is async and yields before calling
-///    `start_preflight`; meanwhile the data router can already be
-///    draining events from the same link. Fix likely needs either:
-///    buffer-until-ready on the data router, or set `local_sent`
-///    synchronously in the links router before any await.
-///
-/// 2. **Announce `OutOfMemory` at the rns packet boundary.**
-///    `compress_app_data` deflate-compresses the canonical-JSON
-///    `AgentInfoSigned`, but holochain's AgentInfoSigned (ret:// URL,
-///    agent hash, etc.) compresses to ~330+ bytes -- above the
-///    ~316 bytes of `app_data` available after rns announce header
-///    overhead. The announce publisher logs
-///    `"Failed to announce destination ... OutOfMemory"` every cycle
-///    and peer discovery via announce never completes. Our test works
-///    around this via `SweetConductorBatch::exchange_peer_info`,
-///    injecting peer info directly, but production deployments
-///    depend on the announce path.
-///
-/// Both issues exposed by `link_data` traffic actually reaching the
-/// wire and being dropped at state-machine gates rather than network
-/// failures, so the fundamental transport-on-loopback pipeline works;
-/// these are state-machine / encoding issues in
-/// `kitsune2_transport_reticulum`.
-#[ignore = "blocked on k2-side preflight race + announce payload size; \
-    kept as end-to-end wiring check for when those land"]
+/// Peer discovery is bootstrapped via `exchange_peer_info` rather
+/// than Reticulum's announce path. Announce-based discovery works in
+/// `kitsune2_transport_reticulum`'s own integration test with its
+/// fixture `AgentInfoSigned`, but holochain's `AgentInfoSigned` —
+/// with `ret://` URL, full storage arc, etc. — sometimes exceeds
+/// the ~316-byte compressed-announce budget by a few bytes; when that
+/// happens the publisher logs a warning and keeps the last good
+/// value, so discovery degrades but doesn't block. Pre-exchanging
+/// peer info sidesteps that variability and keeps this test
+/// deterministic.
 #[tokio::test(flavor = "multi_thread")]
 async fn two_conductors_over_reticulum() {
     holochain_trace::test_run();
@@ -60,8 +41,8 @@ async fn two_conductors_over_reticulum() {
     // builder.build() time, which rejects an empty interfaces list.
     // Provide a placeholder interface that's never actually started
     // (mirroring k2's own two_node_data.rs test harness).
-    let mk_config = || ConductorConfig {
-        network: NetworkConfig {
+    let mk_config = || {
+        let network = NetworkConfig {
             reticulum: Some(ReticulumTransportConfig {
                 interfaces: vec![ReticulumInterfaceConfig::TcpClient {
                     target: "0.0.0.0:0".into(),
@@ -73,8 +54,18 @@ async fn two_conductors_over_reticulum() {
                 link_idle_timeout_s: 60,
             }),
             ..Default::default()
-        },
-        ..Default::default()
+        }
+        // The default initiate interval is 120s -- way longer than our
+        // test timeout. Tight gossip timings so consistency can be
+        // reached within seconds on the in-process loopback bridge.
+        .with_gossip_initiate_interval_ms(500)
+        .with_gossip_initiate_jitter_ms(10)
+        .with_gossip_min_initiate_interval_ms(100);
+
+        ConductorConfig {
+            network,
+            ..Default::default()
+        }
     };
 
     let conductor_a = SweetConductor::from_builder(
