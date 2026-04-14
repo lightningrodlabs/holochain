@@ -130,6 +130,23 @@ pub struct HolochainP2pConfig {
     /// This should contain module configurations such as [CoreBootstrapModConfig](kitsune2_core::factories::CoreBootstrapModConfig).
     pub network_config: Option<serde_json::Value>,
 
+    /// A pre-built Reticulum node to use instead of creating one from
+    /// the network config.
+    ///
+    /// When `Some`, [`HolochainP2pActor::create`] skips
+    /// [`ReticulumNode::from_config`] and uses this node directly —
+    /// required for test harnesses that wire multiple in-process
+    /// `rns_transport::Transport` instances through a loopback bridge.
+    ///
+    /// In production, leave this `None` and let the node be built from
+    /// `network_config`.
+    ///
+    /// Only consulted when the `transport-reticulum` feature is
+    /// enabled.
+    #[cfg(feature = "transport-reticulum")]
+    pub reticulum_node:
+        Option<std::sync::Arc<kitsune2_transport_reticulum::ReticulumNode>>,
+
     /// The compat params to use.
     pub compat: NetworkCompatParams,
 
@@ -231,6 +248,8 @@ impl Default for HolochainP2pConfig {
             auth_material_bootstrap: None,
             auth_material_relay: None,
             network_config: None,
+            #[cfg(feature = "transport-reticulum")]
+            reticulum_node: None,
             compat: Default::default(),
             request_timeout: Duration::from_secs(60),
             report: ReportConfig::default(),

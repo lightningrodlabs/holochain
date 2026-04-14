@@ -502,17 +502,20 @@ impl HolochainP2pActor {
         check_k2_init();
 
         // When the reticulum transport is enabled, build a ReticulumNode from
-        // the user's network config and use kitsune2::reticulum_builder.
-        // Otherwise fall back to the default builder (iroh / tx5).
+        // the user's network config (or use a pre-built one for test
+        // harnesses) and use kitsune2::reticulum_builder. Otherwise fall
+        // back to the default builder (iroh / tx5).
         #[cfg(feature = "transport-reticulum")]
         let mut builder = {
-            let reticulum_config =
-                Self::extract_reticulum_config(config.network_config.as_ref())?;
-            let node = kitsune2_transport_reticulum::ReticulumNode::from_config(
-                reticulum_config,
-            )
-            .await
-            .map_err(HolochainP2pError::K2Error)?;
+            let node = if let Some(node) = config.reticulum_node.clone() {
+                node
+            } else {
+                let reticulum_config =
+                    Self::extract_reticulum_config(config.network_config.as_ref())?;
+                kitsune2_transport_reticulum::ReticulumNode::from_config(reticulum_config)
+                    .await
+                    .map_err(HolochainP2pError::K2Error)?
+            };
             kitsune2::reticulum_builder(node)
         };
         #[cfg(not(feature = "transport-reticulum"))]

@@ -8,6 +8,7 @@ use crate::conductor::ConductorHandle;
 use crate::core::queue_consumer::TriggerSender;
 use crate::core::ribosome::ZomeCallInvocation;
 use crate::sweettest::SweetConductorConfig;
+#[cfg(not(feature = "transport-reticulum"))]
 use crate::sweettest::SweetLocalRendezvous;
 use ::fixt::prelude::*;
 use hdk::prelude::ZomeName;
@@ -575,6 +576,7 @@ pub struct RibosomeTestFixture {
     pub bob_host_fn_caller: HostFnCaller,
 }
 
+#[cfg(not(feature = "transport-reticulum"))]
 impl RibosomeTestFixture {
     /// Create and setup the fixture with the given TestWasm
     pub async fn new(test_wasm: TestWasm) -> Self {

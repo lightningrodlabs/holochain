@@ -33,6 +33,14 @@ pub struct ConductorBuilder {
     /// With these PRAGMA commands, you'll be able to run sqlcipher
     /// directly to manipulate holochain databases.
     pub danger_print_db_secrets: bool,
+
+    /// Pre-built Reticulum node to inject into the p2p actor, bypassing
+    /// [`ReticulumNode::from_config`]. Test-harness escape hatch for
+    /// sharing an `rns_transport::Transport` across in-process
+    /// conductors via a loopback bridge.
+    #[cfg(feature = "transport-reticulum")]
+    pub reticulum_node:
+        Option<std::sync::Arc<kitsune2_transport_reticulum::ReticulumNode>>,
 }
 
 impl ConductorBuilder {
@@ -169,6 +177,8 @@ impl ConductorBuilder {
 
         info!("Conductor startup: passphrase obtained.");
 
+        #[cfg(feature = "transport-reticulum")]
+        let reticulum_node = builder.reticulum_node.clone();
         let Self {
             ribosome_store,
             config,
@@ -254,6 +264,8 @@ impl ConductorBuilder {
             #[cfg(feature = "test_utils")]
             mem_bootstrap: config.network.mem_bootstrap,
             incoming_request_concurrency_limit: config.incoming_request_concurrency_limit,
+            #[cfg(feature = "transport-reticulum")]
+            reticulum_node,
             ..Default::default()
         };
 
@@ -380,6 +392,20 @@ impl ConductorBuilder {
 
     /// Pass a test keystore in, to ensure that generated test agents
     /// are actually available for signing (especially for tryorama compat)
+    /// Inject a pre-built Reticulum node; the p2p actor will skip
+    /// `ReticulumNode::from_config` and use this node directly. Test
+    /// harnesses use this to share an in-process `rns_transport::Transport`
+    /// across conductors via a loopback bridge.
+    #[cfg(feature = "transport-reticulum")]
+    pub fn with_reticulum_node(
+        mut self,
+        node: std::sync::Arc<kitsune2_transport_reticulum::ReticulumNode>,
+    ) -> Self {
+        self.reticulum_node = Some(node);
+        self
+    }
+
+    /// Inject a pre-built keystore to use for this conductor.
     pub fn with_keystore(mut self, keystore: MetaLairClient) -> Self {
         self.keystore = Some(keystore);
         self
@@ -406,6 +432,8 @@ impl ConductorBuilder {
             .clone()
             .unwrap_or_else(holochain_keystore::test_keystore);
 
+        #[cfg(feature = "transport-reticulum")]
+        let reticulum_node = builder.reticulum_node.clone();
         let config = Arc::new(builder.config);
         let spaces = Spaces::new(
             config.clone(),
@@ -492,6 +520,8 @@ impl ConductorBuilder {
             disable_gossip: config.network.disable_gossip,
             #[cfg(feature = "test_utils")]
             mem_bootstrap: config.network.mem_bootstrap,
+            #[cfg(feature = "transport-reticulum")]
+            reticulum_node,
             ..Default::default()
         };
 

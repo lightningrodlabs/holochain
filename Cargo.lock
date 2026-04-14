@@ -2992,6 +2992,7 @@ dependencies = [
  "kitsune2_bootstrap_srv",
  "kitsune2_core",
  "kitsune2_test_utils",
+ "kitsune2_transport_reticulum",
  "lair_keystore",
  "lair_keystore_api",
  "maplit",
@@ -3010,8 +3011,10 @@ dependencies = [
  "rand 0.8.5",
  "rand 0.9.2",
  "rand-utf8",
+ "rand_core 0.6.4",
  "regex",
  "reqwest 0.12.28",
+ "reticulum-rs-transport",
  "rusqlite",
  "rustls",
  "schemars 0.9.0",
@@ -4825,6 +4828,7 @@ name = "kitsune2_transport_reticulum"
 version = "0.5.0-dev.0"
 dependencies = [
  "bytes",
+ "flate2",
  "kitsune2_api",
  "prost 0.14.3",
  "rand_core 0.6.4",

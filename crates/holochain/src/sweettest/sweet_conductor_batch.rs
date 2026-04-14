@@ -45,6 +45,12 @@ impl SweetConductorBatch {
 
     /// Create SweetConductors from the given ConductorConfigs, each with its own new TestEnvironments,
     /// using a "rendezvous" bootstrap server for peer discovery.
+    ///
+    /// Not available under `transport-reticulum`: Reticulum uses
+    /// announce-driven discovery; use [`SweetReticulumRendezvous`]
+    /// instead and construct conductors with
+    /// `ConductorBuilder::with_reticulum_node`.
+    #[cfg(not(feature = "transport-reticulum"))]
     #[allow(clippy::let_and_return)]
     pub async fn from_configs_rendezvous<C, I>(configs: I) -> SweetConductorBatch
     where
@@ -73,6 +79,7 @@ impl SweetConductorBatch {
 
     /// Create a number of SweetConductors from the given ConductorConfig, each with its own new TestEnvironments.
     /// using a "rendezvous" bootstrap server for peer discovery.
+    #[cfg(not(feature = "transport-reticulum"))]
     pub async fn from_config_rendezvous<C>(num: usize, config: C) -> SweetConductorBatch
     where
         C: Into<SweetConductorConfig> + Clone,
@@ -86,6 +93,7 @@ impl SweetConductorBatch {
     }
 
     /// Create the given number of new SweetConductors, each with its own new TestEnvironments
+    #[cfg(not(feature = "transport-reticulum"))]
     pub async fn from_standard_config_rendezvous(num: usize) -> SweetConductorBatch {
         Self::from_config_rendezvous(num, SweetConductorConfig::rendezvous(true)).await
     }
