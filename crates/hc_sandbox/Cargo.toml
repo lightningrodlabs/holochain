@@ -80,7 +80,10 @@ wasmer_sys = ["holochain_client/wasmer_sys"]
 wasmer_wamr = ["holochain_client/wasmer_wamr"]
 
 transport-iroh = ["holochain_client/transport-iroh"]
-transport-reticulum = ["holochain_client/transport-reticulum"]
+transport-reticulum = [
+  "holochain_client/transport-reticulum",
+  "holochain_conductor_api/kitsune2_transport_reticulum",
+]
 transport-tx5-backend-go-pion = [
   "holochain_client/transport-tx5-backend-go-pion",
 ]
