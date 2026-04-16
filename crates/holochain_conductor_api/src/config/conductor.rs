@@ -534,74 +534,95 @@ impl NetworkConfig {
             .unwrap_or_else(|| serde_json::Value::Object(Default::default()));
 
         if let Some(module_config) = working.as_object_mut() {
-            Self::insert_module_config(
-                module_config,
-                "coreBootstrap",
-                "serverUrl",
-                serde_json::Value::String(self.bootstrap_url.as_str().into()),
-            )?;
-            Self::insert_module_config(
-                module_config,
-                "tx5Transport",
-                "serverUrl",
-                serde_json::Value::String(self.signal_url.as_str().into()),
-            )?;
-
-            // timeoutS is set to the floor of 1/2 of the request_timeout_s.
-            let timeout_s: serde_json::Number = (self.request_timeout_s / 2).into();
-            Self::insert_module_config(
-                module_config,
-                "tx5Transport",
-                "timeoutS",
-                serde_json::Value::Number(timeout_s),
-            )?;
-
-            // webrtcConnectTimeoutS is set to the floor of 3/8 of the request_timeout_s.
-            let webrtc_connect_timeout_s: serde_json::Number =
-                ((self.request_timeout_s * 3) / 8).into();
-            Self::insert_module_config(
-                module_config,
-                "tx5Transport",
-                "webrtcConnectTimeoutS",
-                serde_json::Value::Number(webrtc_connect_timeout_s),
-            )?;
-
-            if let Some(webrtc_config) = &self.webrtc_config {
+            // Transport selection is compile-time: see
+            // `holochain_p2p::spawn::actor` where the kitsune2 Builder
+            // branches on `#[cfg(feature = "transport-reticulum")]`.
+            // A reticulum-compiled binary never registers the iroh/tx5
+            // or http-bootstrap modules, so emitting their config keys
+            // just produces `this config parameter may be unused`
+            // warnings at startup. Match the cfg split used there.
+            #[cfg(not(feature = "kitsune2_transport_reticulum"))]
+            {
+                Self::insert_module_config(
+                    module_config,
+                    "coreBootstrap",
+                    "serverUrl",
+                    serde_json::Value::String(self.bootstrap_url.as_str().into()),
+                )?;
                 Self::insert_module_config(
                     module_config,
                     "tx5Transport",
-                    "webrtcConfig",
-                    webrtc_config.clone(),
+                    "serverUrl",
+                    serde_json::Value::String(self.signal_url.as_str().into()),
                 )?;
-            }
 
-            if tracing::enabled!(target: "NETAUDIT", tracing::Level::WARN) {
-                tracing::info!(
-                    "The NETAUDIT target is enabled, turning on network backend tracing"
-                );
+                // timeoutS is set to the floor of 1/2 of the request_timeout_s.
+                let timeout_s: serde_json::Number = (self.request_timeout_s / 2).into();
                 Self::insert_module_config(
                     module_config,
                     "tx5Transport",
-                    "tracingEnabled",
-                    serde_json::Value::Bool(true),
+                    "timeoutS",
+                    serde_json::Value::Number(timeout_s),
+                )?;
+
+                // webrtcConnectTimeoutS is set to the floor of 3/8 of the request_timeout_s.
+                let webrtc_connect_timeout_s: serde_json::Number =
+                    ((self.request_timeout_s * 3) / 8).into();
+                Self::insert_module_config(
+                    module_config,
+                    "tx5Transport",
+                    "webrtcConnectTimeoutS",
+                    serde_json::Value::Number(webrtc_connect_timeout_s),
+                )?;
+
+                if let Some(webrtc_config) = &self.webrtc_config {
+                    Self::insert_module_config(
+                        module_config,
+                        "tx5Transport",
+                        "webrtcConfig",
+                        webrtc_config.clone(),
+                    )?;
+                }
+
+                if tracing::enabled!(target: "NETAUDIT", tracing::Level::WARN) {
+                    tracing::info!(
+                        "The NETAUDIT target is enabled, turning on network backend tracing"
+                    );
+                    Self::insert_module_config(
+                        module_config,
+                        "tx5Transport",
+                        "tracingEnabled",
+                        serde_json::Value::Bool(true),
+                    )?;
+                }
+
+                Self::insert_module_config(
+                    module_config,
+                    "irohTransport",
+                    "relayUrl",
+                    serde_json::Value::String(self.relay_url.as_str().into()),
                 )?;
             }
-
-            Self::insert_module_config(
-                module_config,
-                "irohTransport",
-                "relayUrl",
-                serde_json::Value::String(self.relay_url.as_str().into()),
-            )?;
 
             #[cfg(feature = "kitsune2_transport_reticulum")]
-            if let Some(reticulum) = &self.reticulum {
-                let reticulum_value = serde_json::to_value(reticulum).map_err(|e| {
-                    ConductorConfigError::InvalidNetworkConfig(format!(
-                        "failed to serialize reticulum config: {e}"
-                    ))
-                })?;
-                module_config.insert("reticulumTransport".into(), reticulum_value);
+            {
+                if let Some(reticulum) = &self.reticulum {
+                    let reticulum_value = serde_json::to_value(reticulum).map_err(|e| {
+                        ConductorConfigError::InvalidNetworkConfig(format!(
+                            "failed to serialize reticulum config: {e}"
+                        ))
+                    })?;
+                    module_config.insert("reticulumTransport".into(), reticulum_value);
+                }
+
+                // Strip iroh/tx5/bootstrap blocks that may have leaked
+                // in via the user-supplied `advanced` object (e.g.
+                // hc_sandbox's default `signalAllowPlainText` /
+                // `relayAllowPlainText`). Those modules aren't in this
+                // binary and would trip the "unused parameter" warning.
+                module_config.remove("tx5Transport");
+                module_config.remove("irohTransport");
+                module_config.remove("coreBootstrap");
             }
         } else {
             return Err(ConductorConfigError::InvalidNetworkConfig(
@@ -633,7 +654,10 @@ impl NetworkConfig {
         Ok(())
     }
 
-    // Helper function for injecting a key-value pair into a module's configuration
+    // Helper function for injecting a key-value pair into a module's configuration.
+    // Unused when only `kitsune2_transport_reticulum` is compiled in (the iroh/tx5
+    // blocks that call it are cfg-gated out).
+    #[cfg_attr(feature = "kitsune2_transport_reticulum", allow(dead_code))]
     fn insert_module_config(
         module_config: &mut serde_json::Map<String, serde_json::Value>,
         module: &str,
