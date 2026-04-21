@@ -141,9 +141,8 @@ pub struct HolochainP2pConfig {
     /// In production, leave this `None` and let the node be built from
     /// `network_config`.
     ///
-    /// Only consulted when the `transport-reticulum` feature is
-    /// enabled.
-    #[cfg(feature = "transport-reticulum")]
+    /// Only consulted when a reticulum backend is compiled in.
+    #[cfg(feature = "transport-reticulum-any")]
     pub reticulum_node:
         Option<std::sync::Arc<kitsune2_transport_reticulum::ReticulumNode>>,
 
@@ -248,7 +247,7 @@ impl Default for HolochainP2pConfig {
             auth_material_bootstrap: None,
             auth_material_relay: None,
             network_config: None,
-            #[cfg(feature = "transport-reticulum")]
+            #[cfg(feature = "transport-reticulum-any")]
             reticulum_node: None,
             compat: Default::default(),
             request_timeout: Duration::from_secs(60),

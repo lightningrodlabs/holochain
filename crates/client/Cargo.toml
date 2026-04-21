@@ -55,6 +55,7 @@ wasmer_sys = ["holochain/wasmer_sys"]
 wasmer_wamr = ["holochain/wasmer_wamr"]
 transport-iroh = ["holochain/transport-iroh"]
 transport-reticulum = ["holochain/transport-reticulum"]
+transport-reticulum-beechat = ["holochain/transport-reticulum-beechat"]
 transport-tx5-backend-go-pion = ["holochain/transport-tx5-backend-go-pion"]
 unstable-migration = [
   "holochain_conductor_api/unstable-migration",

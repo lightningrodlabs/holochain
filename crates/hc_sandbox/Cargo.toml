@@ -84,6 +84,10 @@ transport-reticulum = [
   "holochain_client/transport-reticulum",
   "holochain_conductor_api/kitsune2_transport_reticulum",
 ]
+transport-reticulum-beechat = [
+  "holochain_client/transport-reticulum-beechat",
+  "holochain_conductor_api/kitsune2_transport_reticulum",
+]
 transport-tx5-backend-go-pion = [
   "holochain_client/transport-tx5-backend-go-pion",
 ]

@@ -88,9 +88,20 @@ sqlite = ["holo_hash/sqlite", "holochain_keystore/sqlite"]
 
 transport-iroh = ["kitsune2_transport_iroh", "kitsune2/transport-iroh"]
 
+# See `crates/holochain/Cargo.toml` for the rationale behind the
+# `transport-reticulum-any` umbrella feature.
+transport-reticulum-any = []
+
 transport-reticulum = [
+  "transport-reticulum-any",
   "kitsune2_transport_reticulum",
   "kitsune2/transport-reticulum",
+]
+
+transport-reticulum-beechat = [
+  "transport-reticulum-any",
+  "kitsune2_transport_reticulum",
+  "kitsune2/transport-reticulum-beechat",
 ]
 
 transport-tx5-backend-go-pion = [

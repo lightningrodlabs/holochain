@@ -44,6 +44,9 @@ wasmer_wamr = ["holochain_cli_sandbox/wasmer_wamr"]
 
 transport-iroh = ["holochain_cli_sandbox/transport-iroh"]
 transport-reticulum = ["holochain_cli_sandbox/transport-reticulum"]
+transport-reticulum-beechat = [
+  "holochain_cli_sandbox/transport-reticulum-beechat",
+]
 transport-tx5-backend-go-pion = [
   "holochain_cli_sandbox/transport-tx5-backend-go-pion",
 ]

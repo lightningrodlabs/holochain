@@ -505,7 +505,7 @@ impl HolochainP2pActor {
         // the user's network config (or use a pre-built one for test
         // harnesses) and use kitsune2::reticulum_builder. Otherwise fall
         // back to the default builder (iroh / tx5).
-        #[cfg(feature = "transport-reticulum")]
+        #[cfg(feature = "transport-reticulum-any")]
         let mut builder = {
             let node = if let Some(node) = config.reticulum_node.clone() {
                 node
@@ -518,7 +518,7 @@ impl HolochainP2pActor {
             };
             kitsune2::reticulum_builder(node)
         };
-        #[cfg(not(feature = "transport-reticulum"))]
+        #[cfg(not(feature = "transport-reticulum-any"))]
         let mut builder = kitsune2::default_builder();
 
         // The following are flags only used in tests
@@ -526,7 +526,7 @@ impl HolochainP2pActor {
         {
             // Reticulum has no bootstrap server / mem-bootstrap concept --
             // peer discovery is announce-driven.
-            #[cfg(not(feature = "transport-reticulum"))]
+            #[cfg(not(feature = "transport-reticulum-any"))]
             if config.disable_bootstrap {
                 builder.bootstrap = Arc::new(test::NoopBootstrapFactory);
             } else if config.mem_bootstrap {
@@ -667,7 +667,7 @@ impl HolochainP2pActor {
     ///
     /// Returns an error if no `reticulumTransport` block is present, since
     /// the reticulum transport cannot start without an interface list.
-    #[cfg(feature = "transport-reticulum")]
+    #[cfg(feature = "transport-reticulum-any")]
     fn extract_reticulum_config(
         network_config: Option<&serde_json::Value>,
     ) -> HolochainP2pResult<kitsune2_transport_reticulum::ReticulumTransportConfig> {
@@ -675,7 +675,7 @@ impl HolochainP2pActor {
 
         let value = network_config.ok_or_else(|| {
             HolochainP2pError::other(
-                "transport-reticulum feature is enabled but no network config was provided"
+                "a reticulum backend feature is enabled but no network config was provided"
                     .to_string(),
             )
         })?;

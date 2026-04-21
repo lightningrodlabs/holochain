@@ -77,5 +77,6 @@ sqlite = [
 
 transport-iroh = ["holochain_p2p/transport-iroh"]
 transport-reticulum = ["holochain_p2p/transport-reticulum"]
+transport-reticulum-beechat = ["holochain_p2p/transport-reticulum-beechat"]
 
 transport-tx5-backend-go-pion = ["holochain_p2p/transport-tx5-backend-go-pion"]

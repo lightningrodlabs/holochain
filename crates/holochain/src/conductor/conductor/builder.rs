@@ -38,7 +38,7 @@ pub struct ConductorBuilder {
     /// [`ReticulumNode::from_config`]. Test-harness escape hatch for
     /// sharing an `rns_transport::Transport` across in-process
     /// conductors via a loopback bridge.
-    #[cfg(feature = "transport-reticulum")]
+    #[cfg(feature = "transport-reticulum-any")]
     pub reticulum_node:
         Option<std::sync::Arc<kitsune2_transport_reticulum::ReticulumNode>>,
 }
@@ -177,7 +177,7 @@ impl ConductorBuilder {
 
         info!("Conductor startup: passphrase obtained.");
 
-        #[cfg(feature = "transport-reticulum")]
+        #[cfg(feature = "transport-reticulum-any")]
         let reticulum_node = builder.reticulum_node.clone();
         let Self {
             ribosome_store,
@@ -264,7 +264,7 @@ impl ConductorBuilder {
             #[cfg(feature = "test_utils")]
             mem_bootstrap: config.network.mem_bootstrap,
             incoming_request_concurrency_limit: config.incoming_request_concurrency_limit,
-            #[cfg(feature = "transport-reticulum")]
+            #[cfg(feature = "transport-reticulum-any")]
             reticulum_node,
             ..Default::default()
         };
@@ -396,7 +396,7 @@ impl ConductorBuilder {
     /// `ReticulumNode::from_config` and use this node directly. Test
     /// harnesses use this to share an in-process `rns_transport::Transport`
     /// across conductors via a loopback bridge.
-    #[cfg(feature = "transport-reticulum")]
+    #[cfg(feature = "transport-reticulum-any")]
     pub fn with_reticulum_node(
         mut self,
         node: std::sync::Arc<kitsune2_transport_reticulum::ReticulumNode>,
@@ -432,7 +432,7 @@ impl ConductorBuilder {
             .clone()
             .unwrap_or_else(holochain_keystore::test_keystore);
 
-        #[cfg(feature = "transport-reticulum")]
+        #[cfg(feature = "transport-reticulum-any")]
         let reticulum_node = builder.reticulum_node.clone();
         let config = Arc::new(builder.config);
         let spaces = Spaces::new(
@@ -520,7 +520,7 @@ impl ConductorBuilder {
             disable_gossip: config.network.disable_gossip,
             #[cfg(feature = "test_utils")]
             mem_bootstrap: config.network.mem_bootstrap,
-            #[cfg(feature = "transport-reticulum")]
+            #[cfg(feature = "transport-reticulum-any")]
             reticulum_node,
             ..Default::default()
         };

@@ -4,10 +4,10 @@
 // `SweetRendezvous` trait + `DynSweetRendezvous` type alias stay
 // always-on because they're referenced by `sweet_conductor` even
 // when no concrete local rendezvous exists.
-#[cfg(not(feature = "transport-reticulum"))]
+#[cfg(not(feature = "transport-reticulum-any"))]
 use std::net::SocketAddr;
 use std::sync::Arc;
-#[cfg(not(feature = "transport-reticulum"))]
+#[cfg(not(feature = "transport-reticulum-any"))]
 use std::sync::Mutex;
 
 /// How conductors should learn about each other / speak to each other.
@@ -29,7 +29,7 @@ pub trait SweetRendezvous: 'static + Send + Sync {
 pub type DynSweetRendezvous = Arc<dyn SweetRendezvous>;
 
 /// Local rendezvous infrastructure for unit testing.
-#[cfg(not(feature = "transport-reticulum"))]
+#[cfg(not(feature = "transport-reticulum-any"))]
 pub struct SweetLocalRendezvous {
     bs_addr: String,
     #[cfg(any(feature = "transport-tx5-backend-go-pion", feature = "transport-iroh"))]
@@ -48,7 +48,7 @@ pub struct SweetLocalRendezvous {
     _relay_server: iroh_relay::server::Server,
 }
 
-#[cfg(not(feature = "transport-reticulum"))]
+#[cfg(not(feature = "transport-reticulum-any"))]
 impl Drop for SweetLocalRendezvous {
     fn drop(&mut self) {
         if let Some(mut s) = self.bootstrap_hnd.lock().unwrap().take() {
@@ -59,7 +59,7 @@ impl Drop for SweetLocalRendezvous {
     }
 }
 
-#[cfg(not(feature = "transport-reticulum"))]
+#[cfg(not(feature = "transport-reticulum-any"))]
 async fn spawn_test_bootstrap(
     bind_addr: Option<SocketAddr>,
 ) -> std::io::Result<(kitsune2_bootstrap_srv::BootstrapSrv, SocketAddr)> {
@@ -93,7 +93,7 @@ async fn spawn_test_bootstrap(
     Ok((bootstrap, addr))
 }
 
-#[cfg(not(feature = "transport-reticulum"))]
+#[cfg(not(feature = "transport-reticulum-any"))]
 impl SweetLocalRendezvous {
     /// Create a new local rendezvous instance.
     #[allow(clippy::new_ret_no_self)]
@@ -175,7 +175,7 @@ impl SweetLocalRendezvous {
     }
 }
 
-#[cfg(not(feature = "transport-reticulum"))]
+#[cfg(not(feature = "transport-reticulum-any"))]
 impl SweetRendezvous for SweetLocalRendezvous {
     /// Get the bootstrap address.
     fn bootstrap_addr(&self) -> &str {

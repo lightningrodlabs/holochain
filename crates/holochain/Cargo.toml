@@ -262,13 +262,32 @@ transport-iroh = [
   "holochain_cascade/transport-iroh",
 ]
 
+# Umbrella feature enabled by both `transport-reticulum` and
+# `transport-reticulum-beechat`. Source-level `#[cfg]` guards that only
+# care that *some* reticulum backend is compiled in key off this; guards
+# that care specifically about the LXMF-rs backend key off
+# `transport-reticulum` (which brings in `rns_transport` / the sweet
+# in-process bridge).
+transport-reticulum-any = []
+
 transport-reticulum = [
+  "transport-reticulum-any",
   "holochain_p2p/transport-reticulum",
   "holochain_cascade/transport-reticulum",
   "holochain_conductor_api/kitsune2_transport_reticulum",
   "dep:kitsune2_transport_reticulum",
+  "kitsune2_transport_reticulum/backend-lxmf",
   "dep:reticulum-rs-transport",
   "dep:rand_core",
+]
+
+transport-reticulum-beechat = [
+  "transport-reticulum-any",
+  "holochain_p2p/transport-reticulum-beechat",
+  "holochain_cascade/transport-reticulum-beechat",
+  "holochain_conductor_api/kitsune2_transport_reticulum",
+  "dep:kitsune2_transport_reticulum",
+  "kitsune2_transport_reticulum/backend-beechat",
 ]
 
 transport-tx5-backend-go-pion = [

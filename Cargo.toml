@@ -93,7 +93,7 @@ kitsune2_test_utils = { path = "../kitsune2-lrl/crates/test_utils" }
 kitsune2_transport_tx5 = { path = "../kitsune2-lrl/crates/transport_tx5" }
 kitsune2_transport_iroh = { path = "../kitsune2-lrl/crates/transport_iroh" }
 kitsune2_transport_reticulum = { path = "../kitsune2-lrl/crates/transport_reticulum" }
-reticulum-rs-transport = { git = "https://github.com/lightningrodlabs/LXMF-rs", branch = "bump-rusqlite-0.37" }
+reticulum-rs-transport = { git = "https://github.com/lightningrodlabs/LXMF-rs", branch = "udp-multicast" }
 # sbd-server = { path = "../sbd/rust/sbd-server" }
 # sbd-client = { path = "../sbd/rust/sbd-client" }
 # sbd-e2e-crypto-client = { path = "../sbd/rust/sbd-e2e-crypto-client" }

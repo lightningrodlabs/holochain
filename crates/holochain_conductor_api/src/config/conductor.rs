@@ -536,7 +536,7 @@ impl NetworkConfig {
         if let Some(module_config) = working.as_object_mut() {
             // Transport selection is compile-time: see
             // `holochain_p2p::spawn::actor` where the kitsune2 Builder
-            // branches on `#[cfg(feature = "transport-reticulum")]`.
+            // branches on `#[cfg(feature = "transport-reticulum-any")]`.
             // A reticulum-compiled binary never registers the iroh/tx5
             // or http-bootstrap modules, so emitting their config keys
             // just produces `this config parameter may be unused`
