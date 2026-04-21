@@ -65,6 +65,8 @@ jobs:
             target: wasmer_sys-transport_tx5
           - os: ubuntu-latest
             target: wasmer_sys-transport_reticulum
+          - os: ubuntu-latest
+            target: wasmer_sys-transport_reticulum_beechat
           - os: macos-latest
             target: wasmer_sys
           - os: macos-15-intel
