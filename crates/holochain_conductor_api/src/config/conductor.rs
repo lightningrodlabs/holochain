@@ -273,6 +273,34 @@ pub enum ReportConfig {
     },
 }
 
+/// Configuration for mDNS-based LAN peer discovery.
+///
+/// This maps onto the `mdnsBootstrap` kitsune2 module config provided by
+/// the `kitsune2_bootstrap_mdns` crate. mDNS discovery runs alongside the
+/// bootstrap server (it does not replace it): both feed the same peer
+/// store.
+#[derive(Clone, Debug, Default, Deserialize, Serialize, PartialEq, JsonSchema)]
+#[serde(rename_all = "snake_case", deny_unknown_fields)]
+pub struct MdnsConfig {
+    /// Enable mDNS LAN discovery.
+    ///
+    /// Defaults to false.
+    #[serde(default)]
+    pub enabled: bool,
+
+    /// Override the mDNS service type to announce/browse.
+    ///
+    /// When omitted, the kitsune2 default (`_kitsune2._udp.local.`) is used.
+    #[serde(default)]
+    pub service_type: Option<String>,
+
+    /// Override the announce refresh interval in milliseconds.
+    ///
+    /// When omitted, the kitsune2 default (30000) is used.
+    #[serde(default)]
+    pub refresh_interval_ms: Option<u32>,
+}
+
 /// All the network config information for the conductor.
 #[derive(Clone, Deserialize, Serialize, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case", deny_unknown_fields)]
@@ -328,6 +356,15 @@ pub struct NetworkConfig {
     #[serde(default)]
     pub report: ReportConfig,
 
+    /// Enable and configure mDNS LAN discovery.
+    ///
+    /// This runs *alongside* the bootstrap server: local peers are found
+    /// via mDNS while remote peers are still found via `bootstrap_url`.
+    /// When omitted, mDNS is disabled and the emitted kitsune2 config is
+    /// unchanged.
+    #[serde(default)]
+    pub mdns: Option<MdnsConfig>,
+
     /// Use this advanced field to directly configure kitsune2.
     ///
     /// The above options actually just set specific values in this config.
@@ -368,6 +405,7 @@ impl Default for NetworkConfig {
             webrtc_config: None,
             target_arc_factor: default_target_arc_factor(),
             report: Default::default(),
+            mdns: None,
             advanced: None,
             #[cfg(feature = "test-utils")]
             disable_bootstrap: false,
@@ -413,6 +451,7 @@ impl std::fmt::Debug for NetworkConfig {
         s.field("webrtc_config", &self.webrtc_config);
         s.field("target_arc_factor", &self.target_arc_factor);
         s.field("report", &self.report);
+        s.field("mdns", &self.mdns);
         s.field("advanced", &self.advanced);
         #[cfg(feature = "test-utils")]
         {
@@ -566,6 +605,31 @@ impl NetworkConfig {
                 "relayUrl",
                 serde_json::Value::String(self.relay_url.as_str().into()),
             )?;
+
+            if let Some(mdns) = &self.mdns {
+                Self::insert_module_config(
+                    module_config,
+                    "mdnsBootstrap",
+                    "enabled",
+                    serde_json::Value::Bool(mdns.enabled),
+                )?;
+                if let Some(service_type) = &mdns.service_type {
+                    Self::insert_module_config(
+                        module_config,
+                        "mdnsBootstrap",
+                        "serviceType",
+                        serde_json::Value::String(service_type.clone()),
+                    )?;
+                }
+                if let Some(refresh_interval_ms) = mdns.refresh_interval_ms {
+                    Self::insert_module_config(
+                        module_config,
+                        "mdnsBootstrap",
+                        "refreshIntervalMs",
+                        serde_json::Value::Number(refresh_interval_ms.into()),
+                    )?;
+                }
+            }
         } else {
             return Err(ConductorConfigError::InvalidNetworkConfig(
                 "advanced field must be an object".to_string(),
@@ -1072,6 +1136,56 @@ admin_interfaces:
             .unwrap();
         builder.config.set_module_config(&k2_config).unwrap();
         builder.validate_config().unwrap();
+    }
+
+    #[test]
+    fn network_config_without_mdns_emits_no_mdns_key() {
+        let network_config = NetworkConfig::default();
+        let k2_config = network_config.to_k2_config().unwrap();
+
+        assert!(
+            k2_config.get("mdnsBootstrap").is_none(),
+            "mdnsBootstrap must be absent when mdns is not configured"
+        );
+    }
+
+    #[test]
+    fn network_config_with_mdns_emits_module_config() {
+        let network_config = NetworkConfig {
+            mdns: Some(MdnsConfig {
+                enabled: true,
+                service_type: None,
+                refresh_interval_ms: Some(10_000),
+            }),
+            ..Default::default()
+        };
+
+        let k2_config = network_config.to_k2_config().unwrap();
+
+        assert_eq!(
+            k2_config.get("mdnsBootstrap"),
+            Some(&serde_json::json!({
+                "enabled": true,
+                "refreshIntervalMs": 10_000,
+            }))
+        );
+    }
+
+    #[test]
+    fn network_config_mdns_parses_from_yaml() {
+        let yaml = r#"---
+    bootstrap_url: https://test-bootstrap.holochain.org
+    signal_url: wss://test-bootstrap.holochain.org
+    relay_url: https://test-relay.holochain.org
+    mdns:
+      enabled: true
+      service_type: "_kitsune2._udp.local."
+    "#;
+        let network_config: NetworkConfig = serde_yaml::from_str(yaml).unwrap();
+        let mdns = network_config.mdns.expect("mdns block should parse");
+        assert!(mdns.enabled);
+        assert_eq!(mdns.service_type.as_deref(), Some("_kitsune2._udp.local."));
+        assert_eq!(mdns.refresh_interval_ms, None);
     }
 
     #[test]
