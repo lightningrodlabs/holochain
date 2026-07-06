@@ -48,7 +48,10 @@ kitsune2_core = "0.4.1"
 # Unpublished: mdns LAN discovery bootstrap from the kitsune2-lrl fork
 # (same source tree the kitsune2 crates are patched to at the workspace root).
 kitsune2_bootstrap_mdns = { path = "../../../kitsune2-lrl/crates/bootstrap_mdns" }
-kitsune2_transport_iroh = { version = "0.4.1", default-features = false, optional = true }
+# The `mdns` feature compiles in iroh's LAN-local peer discovery
+# (LocalSwarmDiscovery); it stays inert unless the
+# `irohTransport.enableLanDiscovery` config flag is set at runtime.
+kitsune2_transport_iroh = { version = "0.4.1", default-features = false, features = ["mdns"], optional = true }
 kitsune2_transport_tx5 = { version = "0.4.1", default-features = false, optional = true }
 bytes = "1.10"
 holochain_sqlite = { version = "^0.6.1", path = "../holochain_sqlite" }
