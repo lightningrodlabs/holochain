@@ -82,6 +82,18 @@ opt-level = "z"
 lto = true
 
 [patch.crates-io]
+# mdns work: consume kitsune2-lrl (branch feat/mdns-bootstrap-0.4.1,
+# kitsune2 v0.4.1 + kitsune2_bootstrap_mdns + CompositeBootstrapFactory).
+kitsune2_api = { path = "../kitsune2-lrl/crates/api" }
+kitsune2_core = { path = "../kitsune2-lrl/crates/core" }
+kitsune2 = { path = "../kitsune2-lrl/crates/kitsune2" }
+kitsune2_dht = { path = "../kitsune2-lrl/crates/dht" }
+kitsune2_gossip = { path = "../kitsune2-lrl/crates/gossip" }
+kitsune2_bootstrap_srv = { path = "../kitsune2-lrl/crates/bootstrap_srv" }
+kitsune2_bootstrap_client = { path = "../kitsune2-lrl/crates/bootstrap_client" }
+kitsune2_test_utils = { path = "../kitsune2-lrl/crates/test_utils" }
+kitsune2_transport_tx5 = { path = "../kitsune2-lrl/crates/transport_tx5" }
+kitsune2_transport_iroh = { path = "../kitsune2-lrl/crates/transport_iroh" }
 # kitsune2_api = { path = "../kitsune2/crates/api" }
 # kitsune2_core = { path = "../kitsune2/crates/core" }
 # kitsune2 = { path = "../kitsune2/crates/kitsune2" }
