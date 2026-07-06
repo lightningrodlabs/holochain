@@ -45,6 +45,9 @@ kitsune2 = { version = "0.4.1", default-features = false }
 kitsune2_bootstrap_srv = { version = "0.4.1", default-features = false, optional = true }
 kitsune2_api = "0.4.1"
 kitsune2_core = "0.4.1"
+# Unpublished: mdns LAN discovery bootstrap from the kitsune2-lrl fork
+# (same source tree the kitsune2 crates are patched to at the workspace root).
+kitsune2_bootstrap_mdns = { path = "../../../kitsune2-lrl/crates/bootstrap_mdns" }
 kitsune2_transport_iroh = { version = "0.4.1", default-features = false, optional = true }
 kitsune2_transport_tx5 = { version = "0.4.1", default-features = false, optional = true }
 bytes = "1.10"
