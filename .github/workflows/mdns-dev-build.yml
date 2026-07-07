@@ -1,6 +1,6 @@
-# Builds the mdns-enabled holochain binary from clean checkouts for every
-# platform Moss's publish-dev matrix covers, and publishes them to a
-# prerelease tagged `holochain-0.6.1-mdns` with per-file sha256s.
+# Builds the mdns-enabled holochain binary from clean checkouts for the
+# demo platforms (linux x64, mac arm, windows x64), and publishes them to
+# a prerelease tagged `holochain-0.6.1-mdns` with per-file sha256s.
 #
 # Layout note: this branch consumes kitsune2-lrl via relative path deps
 # ([patch.crates-io] -> ../kitsune2-lrl, plus a direct path dep on the
@@ -24,20 +24,22 @@ env:
   KITSUNE2_LRL_REF: feat/mdns-bootstrap-0.4.1
   RELEASE_TAG: holochain-0.6.1-mdns
 
+concurrency:
+  group: mdns-dev-build
+  cancel-in-progress: true
+
 jobs:
   build:
     strategy:
       fail-fast: false
+      # Dev-build matrix, trimmed to the demo platforms to save CI time
+      # (ubuntu-22.04-arm and macos-15-intel deliberately omitted).
       matrix:
         include:
           - platform: ubuntu-22.04
             target: x86_64-unknown-linux-gnu
-          - platform: ubuntu-22.04-arm
-            target: aarch64-unknown-linux-gnu
           - platform: macos-latest
             target: aarch64-apple-darwin
-          - platform: macos-15-intel
-            target: x86_64-apple-darwin
           - platform: windows-2022
             target: x86_64-pc-windows-msvc
     runs-on: ${{ matrix.platform }}
