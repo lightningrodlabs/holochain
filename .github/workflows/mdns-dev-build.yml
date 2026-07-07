@@ -34,14 +34,18 @@ jobs:
       fail-fast: false
       # Dev-build matrix, trimmed to the demo platforms to save CI time
       # (ubuntu-22.04-arm and macos-15-intel deliberately omitted).
+      #
+      # TODO(windows): windows-2022 / x86_64-pc-windows-msvc is disabled for
+      # now — openssl-sys v0.9.112 builds vendored OpenSSL and its build
+      # script fails ("'perl' reported failure with exit code: 2"): the
+      # runner needs Strawberry Perl (+ NASM) set up the way upstream
+      # holochain's release workflow does. Reinstate the entry once fixed.
       matrix:
         include:
           - platform: ubuntu-22.04
             target: x86_64-unknown-linux-gnu
           - platform: macos-latest
             target: aarch64-apple-darwin
-          - platform: windows-2022
-            target: x86_64-pc-windows-msvc
     runs-on: ${{ matrix.platform }}
     steps:
       - name: Free disk space (linux runners are tight for holochain release builds)
