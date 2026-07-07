@@ -1,0 +1,129 @@
+# Builds the mdns-enabled holochain binary from clean checkouts for every
+# platform Moss's publish-dev matrix covers, and publishes them to a
+# prerelease tagged `holochain-0.6.1-mdns` with per-file sha256s.
+#
+# Layout note: this branch consumes kitsune2-lrl via relative path deps
+# ([patch.crates-io] -> ../kitsune2-lrl, plus a direct path dep on the
+# unpublished kitsune2_bootstrap_mdns crate), so the workflow checks out
+# both repos side-by-side to reproduce the local layout exactly — no
+# Cargo.toml changes needed.
+#
+# Asset naming matches what Moss's scripts/fetch-fns.mjs expects:
+#   holochain-<target-triple>[.exe]
+# so the Moss-side change is only the release URL + checksums.
+#
+# Trigger: push to the mdns branch (workflow_dispatch only works for
+# workflows that exist on the default branch, which this one doesn't).
+name: mdns-dev-build
+
+on:
+  push:
+    branches: [feat/mdns-bootstrap-0.6.1]
+
+env:
+  KITSUNE2_LRL_REF: feat/mdns-bootstrap-0.4.1
+  RELEASE_TAG: holochain-0.6.1-mdns
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: ubuntu-22.04
+            target: x86_64-unknown-linux-gnu
+          - platform: ubuntu-22.04-arm
+            target: aarch64-unknown-linux-gnu
+          - platform: macos-latest
+            target: aarch64-apple-darwin
+          - platform: macos-15-intel
+            target: x86_64-apple-darwin
+          - platform: windows-2022
+            target: x86_64-pc-windows-msvc
+    runs-on: ${{ matrix.platform }}
+    steps:
+      - name: Free disk space (linux runners are tight for holochain release builds)
+        if: runner.os == 'Linux'
+        run: |
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /opt/hostedtoolcache/CodeQL
+          df -h /
+
+      - name: Checkout holochain-lrl
+        uses: actions/checkout@v4
+        with:
+          path: holochain-lrl
+
+      - name: Checkout kitsune2-lrl (side-by-side, preserves ../kitsune2-lrl path deps)
+        uses: actions/checkout@v4
+        with:
+          repository: lightningrodlabs/kitsune2
+          ref: ${{ env.KITSUNE2_LRL_REF }}
+          path: kitsune2-lrl
+
+      - name: Install Go (tx5 go-pion build)
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.24'
+
+      - name: Rust toolchain (pinned by rust-toolchain.toml)
+        working-directory: holochain-lrl
+        shell: bash
+        run: rustup show
+
+      - name: Build holochain (release)
+        working-directory: holochain-lrl
+        shell: bash
+        run: cargo build --release --locked -p holochain --bin holochain
+
+      - name: Smoke check binary
+        working-directory: holochain-lrl
+        shell: bash
+        run: ./target/release/holochain --version
+
+      - name: Stage asset with fetch-fns.mjs naming
+        shell: bash
+        run: |
+          mkdir staged
+          EXT=""
+          if [ "${{ runner.os }}" = "Windows" ]; then EXT=".exe"; fi
+          cp "holochain-lrl/target/release/holochain${EXT}" "staged/holochain-${{ matrix.target }}${EXT}"
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: holochain-${{ matrix.target }}
+          path: staged/*
+          if-no-files-found: error
+
+  release:
+    needs: build
+    runs-on: ubuntu-22.04
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download all binaries
+        uses: actions/download-artifact@v4
+        with:
+          path: dist
+          merge-multiple: true
+
+      - name: Compute sha256 checksums
+        working-directory: dist
+        run: |
+          sha256sum holochain-* > SHA256SUMS
+          cat SHA256SUMS
+
+      - name: Create or update prerelease
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          if ! gh release view "$RELEASE_TAG" >/dev/null 2>&1; then
+            gh release create "$RELEASE_TAG" \
+              --target "${{ github.sha }}" \
+              --title "holochain 0.6.1 + mdns (dev)" \
+              --prerelease \
+              --notes "mdns-enabled holochain binaries built from feat/mdns-bootstrap-0.6.1 (+ kitsune2-lrl $KITSUNE2_LRL_REF). Assets are named for Moss's fetch-binaries scripts. Re-runs replace assets in place; built from ${{ github.sha }}."
+          fi
+          gh release upload "$RELEASE_TAG" dist/* --clobber
