@@ -4836,6 +4836,7 @@ version = "0.4.1"
 dependencies = [
  "base64",
  "bytes",
+ "futures",
  "iroh-holochain",
  "kitsune2_api",
  "kitsune2_bootstrap_client",
