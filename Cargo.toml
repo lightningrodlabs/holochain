@@ -81,6 +81,17 @@ opt-level = "z"
 lto = true
 
 [patch.crates-io]
+# broadcast-transport work: consume kitsune2-lrl (branch broadcast-transport,
+# kitsune2 0.5.0-dev.6 + kitsune2_transport_broadcast + kitsune2_transport_switch).
+kitsune2_api = { path = "../kitsune2-lrl/crates/api" }
+kitsune2_core = { path = "../kitsune2-lrl/crates/core" }
+kitsune2 = { path = "../kitsune2-lrl/crates/kitsune2" }
+kitsune2_dht = { path = "../kitsune2-lrl/crates/dht" }
+kitsune2_gossip = { path = "../kitsune2-lrl/crates/gossip" }
+kitsune2_bootstrap_srv = { path = "../kitsune2-lrl/crates/bootstrap_srv" }
+kitsune2_bootstrap_client = { path = "../kitsune2-lrl/crates/bootstrap_client" }
+kitsune2_test_utils = { path = "../kitsune2-lrl/crates/test_utils" }
+kitsune2_transport_iroh = { path = "../kitsune2-lrl/crates/transport_iroh" }
 # kitsune2_api = { path = "../kitsune2/crates/api" }
 # kitsune2_core = { path = "../kitsune2/crates/core" }
 # kitsune2 = { path = "../kitsune2/crates/kitsune2" }
