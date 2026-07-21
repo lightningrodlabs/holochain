@@ -318,6 +318,57 @@ pub enum ReportConfig {
     },
 }
 
+/// Configuration for the network transport backend.
+///
+/// The conductor compiles in several transport backends and selects the
+/// active one at runtime via the kitsune2 `switchTransport` module config
+/// this block maps onto. When omitted, the default backend (`iroh`) is
+/// used and the emitted kitsune2 config is unchanged.
+#[derive(Clone, Debug, Default, Deserialize, Serialize, PartialEq, JsonSchema)]
+#[serde(rename_all = "snake_case", deny_unknown_fields)]
+pub struct TransportConfig {
+    /// The transport backend to activate at startup.
+    ///
+    /// Currently `"iroh"` (default) or `"broadcast"`. The backend can also
+    /// be switched at runtime without a restart.
+    #[serde(default)]
+    pub active: Option<String>,
+
+    /// Settings for the broadcast transport backend
+    /// (`kitsune2_transport_broadcast`); ignored while another backend is
+    /// active, but applied when switching to it.
+    #[serde(default)]
+    pub broadcast: Option<BroadcastTransportConfig>,
+}
+
+/// Settings for the broadcast transport backend.
+///
+/// Maps onto the kitsune2 `broadcastTransport` module config.
+#[derive(Clone, Debug, Default, Deserialize, Serialize, PartialEq, JsonSchema)]
+#[serde(rename_all = "snake_case", deny_unknown_fields)]
+pub struct BroadcastTransportConfig {
+    /// The broadcast medium: `"udpMulticast"` (default) or `"mem"`
+    /// (in-process, testing only).
+    #[serde(default)]
+    pub medium: Option<String>,
+
+    /// The IPv4 multicast group for the udp multicast medium.
+    #[serde(default)]
+    pub group: Option<String>,
+
+    /// The shared UDP port for the udp multicast medium.
+    #[serde(default)]
+    pub port: Option<u16>,
+
+    /// Largest frame to transmit on the udp multicast medium.
+    #[serde(default)]
+    pub mtu: Option<u32>,
+
+    /// Virtual-connection idle timeout in milliseconds.
+    #[serde(default)]
+    pub idle_timeout_ms: Option<u32>,
+}
+
 /// All the network config information for the conductor.
 #[derive(Clone, Deserialize, Serialize, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case", deny_unknown_fields)]
@@ -362,6 +413,13 @@ pub struct NetworkConfig {
     #[serde(default)]
     pub report: ReportConfig,
 
+    /// Select and configure the network transport backend.
+    ///
+    /// When omitted, the default backend (`iroh`) is used and the emitted
+    /// kitsune2 config is unchanged.
+    #[serde(default)]
+    pub transport: Option<TransportConfig>,
+
     /// Use this advanced field to directly configure kitsune2.
     ///
     /// The above options actually just set specific values in this config.
@@ -395,6 +453,7 @@ impl Default for NetworkConfig {
             request_timeout_s: default_request_timeout_s(),
             target_arc_factor: default_target_arc_factor(),
             report: Default::default(),
+            transport: None,
             advanced: None,
             #[cfg(feature = "test-utils")]
             disable_bootstrap: false,
@@ -436,6 +495,7 @@ impl std::fmt::Debug for NetworkConfig {
         s.field("request_timeout_s", &self.request_timeout_s);
         s.field("target_arc_factor", &self.target_arc_factor);
         s.field("report", &self.report);
+        s.field("transport", &self.transport);
         s.field("advanced", &self.advanced);
         #[cfg(feature = "test-utils")]
         {
@@ -552,6 +612,54 @@ impl NetworkConfig {
                 "relayUrl",
                 serde_json::Value::String(self.relay_url.as_str().into()),
             )?;
+
+            if let Some(transport) = &self.transport {
+                if let Some(active) = &transport.active {
+                    Self::insert_module_config(
+                        module_config,
+                        "switchTransport",
+                        "active",
+                        serde_json::Value::String(active.clone()),
+                    )?;
+                }
+                if let Some(broadcast) = &transport.broadcast {
+                    if let Some(medium) = &broadcast.medium {
+                        Self::insert_module_config(
+                            module_config,
+                            "broadcastTransport",
+                            "medium",
+                            serde_json::Value::String(medium.clone()),
+                        )?;
+                    }
+                    if let Some(idle_timeout_ms) = broadcast.idle_timeout_ms {
+                        Self::insert_module_config(
+                            module_config,
+                            "broadcastTransport",
+                            "idleTimeoutMs",
+                            serde_json::Value::Number(idle_timeout_ms.into()),
+                        )?;
+                    }
+                    let mut udp_multicast = serde_json::Map::new();
+                    if let Some(group) = &broadcast.group {
+                        udp_multicast
+                            .insert("group".into(), serde_json::Value::String(group.clone()));
+                    }
+                    if let Some(port) = broadcast.port {
+                        udp_multicast.insert("port".into(), serde_json::Value::Number(port.into()));
+                    }
+                    if let Some(mtu) = broadcast.mtu {
+                        udp_multicast.insert("mtu".into(), serde_json::Value::Number(mtu.into()));
+                    }
+                    if !udp_multicast.is_empty() {
+                        Self::insert_module_config(
+                            module_config,
+                            "broadcastTransport",
+                            "udpMulticast",
+                            serde_json::Value::Object(udp_multicast),
+                        )?;
+                    }
+                }
+            }
         } else {
             return Err(ConductorConfigError::InvalidNetworkConfig(
                 "advanced field must be an object".to_string(),
@@ -1219,5 +1327,76 @@ admin_interfaces:
     "#;
         let result: ConductorConfigResult<ConductorConfig> = config_from_yaml(yaml);
         assert_matches!(result, Err(ConductorConfigError::SerializationError(_)));
+    }
+
+    #[test]
+    fn network_config_without_transport_emits_no_switch_keys() {
+        let network_config = NetworkConfig::default();
+        let k2_config = network_config.to_k2_config().unwrap();
+
+        assert!(
+            k2_config.get("switchTransport").is_none(),
+            "switchTransport must be absent when transport is not configured"
+        );
+        assert!(
+            k2_config.get("broadcastTransport").is_none(),
+            "broadcastTransport must be absent when transport is not configured"
+        );
+    }
+
+    #[test]
+    fn network_config_with_transport_emits_module_config() {
+        let network_config = NetworkConfig {
+            transport: Some(TransportConfig {
+                active: Some("broadcast".into()),
+                broadcast: Some(BroadcastTransportConfig {
+                    medium: Some("udpMulticast".into()),
+                    group: Some("239.19.42.7".into()),
+                    port: Some(24842),
+                    mtu: None,
+                    idle_timeout_ms: Some(10_000),
+                }),
+            }),
+            ..Default::default()
+        };
+
+        let k2_config = network_config.to_k2_config().unwrap();
+
+        assert_eq!(
+            k2_config.get("switchTransport"),
+            Some(&serde_json::json!({ "active": "broadcast" }))
+        );
+        assert_eq!(
+            k2_config.get("broadcastTransport"),
+            Some(&serde_json::json!({
+                "medium": "udpMulticast",
+                "idleTimeoutMs": 10_000,
+                "udpMulticast": {
+                    "group": "239.19.42.7",
+                    "port": 24842,
+                },
+            }))
+        );
+    }
+
+    #[test]
+    fn network_config_transport_from_yaml() {
+        let yaml = r#"---
+    data_root_path: /path/to/env
+    keystore:
+      type: danger_test_keystore
+    network:
+      bootstrap_url: https://bootstrap.example
+      relay_url: https://relay.example
+      transport:
+        active: broadcast
+        broadcast:
+          medium: udpMulticast
+          port: 24900
+    "#;
+        let result: ConductorConfig = config_from_yaml(yaml).unwrap();
+        let transport = result.network.transport.unwrap();
+        assert_eq!(transport.active.as_deref(), Some("broadcast"));
+        assert_eq!(transport.broadcast.unwrap().port, Some(24900));
     }
 }
