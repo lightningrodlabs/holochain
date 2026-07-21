@@ -287,6 +287,24 @@ pub enum AdminRequest {
     /// [`AdminResponse::NetworkStatsDumped`]
     DumpNetworkStats,
 
+    /// Switch the active network transport backend at runtime.
+    ///
+    /// The conductor compiles in several transport backends (currently
+    /// `"iroh"` and `"broadcast"`); this call activates the named one
+    /// without a restart. The switch is asynchronous: the response
+    /// acknowledges that the request was accepted, and the swap replays
+    /// networking state onto the new backend and re-publishes agent infos
+    /// with the new address. The currently active backend is reported by
+    /// [`AdminRequest::DumpNetworkStats`] as `transport_stats.backend`.
+    ///
+    /// # Returns
+    ///
+    /// [`AdminResponse::NetworkTransportSwitched`]
+    SwitchNetworkTransport {
+        /// The name of the transport backend to activate.
+        backend: String,
+    },
+
     /// Add a list of agents to this conductor's peer store.
     ///
     /// This is a way of shortcutting peer discovery and is useful for testing.
@@ -509,6 +527,13 @@ pub enum AdminResponse {
 
     /// The successful result of a call to [`AdminRequest::DumpNetworkStats`].
     NetworkStatsDumped(HolochainTransportStats),
+
+    /// The successful response to an [`AdminRequest::SwitchNetworkTransport`].
+    ///
+    /// The switch request was accepted; the swap itself completes
+    /// asynchronously. Poll [`AdminRequest::DumpNetworkStats`] to observe
+    /// the new backend.
+    NetworkTransportSwitched,
 
     /// The successful response to an [`AdminRequest::AddAgentInfo`].
     ///

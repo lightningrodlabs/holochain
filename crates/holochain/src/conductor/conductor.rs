@@ -2677,6 +2677,16 @@ mod misc_impls {
             })
         }
 
+        /// Switch the active network transport backend at runtime.
+        ///
+        /// See [`AdminRequest::SwitchNetworkTransport`](holochain_conductor_api::AdminRequest::SwitchNetworkTransport).
+        pub async fn switch_network_transport(&self, backend: String) -> ConductorApiResult<()> {
+            self.holochain_p2p
+                .switch_transport_backend(backend)
+                .await
+                .map_err(Into::into)
+        }
+
         /// Dump of backend network stats from the Kitsune2 network transport.
         ///
         /// This version of the function filters the stats to only include connections

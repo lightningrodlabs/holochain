@@ -223,6 +223,12 @@ impl AdminInterfaceApi {
                 let stats = self.conductor_handle.dump_network_stats().await?;
                 Ok(AdminResponse::NetworkStatsDumped(stats))
             }
+            SwitchNetworkTransport { backend } => {
+                self.conductor_handle
+                    .switch_network_transport(backend)
+                    .await?;
+                Ok(AdminResponse::NetworkTransportSwitched)
+            }
             AddAgentInfo { agent_infos } => {
                 self.conductor_handle.add_agent_infos(agent_infos).await?;
                 Ok(AdminResponse::AgentInfoAdded)

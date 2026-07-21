@@ -12,6 +12,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
   `AppInterfaceId`, and `AppInterfaceConfig`) moved to
   `holochain_conductor_api::state`. The unused
   `ConductorState::get_network_compat` method was removed. \#5737
+- The network transport is now a runtime-switchable set of backends: iroh (default, unchanged behavior) plus the new broadcast-medium transport (`kitsune2_transport_broadcast`, UDP multicast on a LAN or an in-process test medium). A new optional `network.transport` conductor-config block selects and configures the active backend at startup, and the new `SwitchNetworkTransport` admin call switches it at runtime without a restart; `DumpNetworkStats` reports the active backend. When `network.transport` is omitted, behavior is identical to before.
 
 ## 0.7.0-rc.3
 
