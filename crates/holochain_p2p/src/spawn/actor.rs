@@ -288,6 +288,11 @@ pub(crate) struct HolochainP2pActor {
     evt_sender: Arc<std::sync::OnceLock<WrapEvtSender>>,
     lair_client: holochain_keystore::MetaLairClient,
     kitsune: DynKitsune,
+    /// The kitsune2 builder this instance was built from. Retained so
+    /// runtime config updates (e.g. switching the active transport
+    /// backend) can reach the live [`Config`] instance that modules
+    /// registered their update callbacks on.
+    k2_builder: Arc<kitsune2_api::Builder>,
     space_overridable_kitsune2_config: Config,
     get_conductor_store: GetConductorStore,
     pending: Arc<Mutex<Pending>>,
@@ -554,6 +559,20 @@ impl HolochainP2pActor {
 
         let mut builder = kitsune2::default_builder();
 
+        // Compose the transport as a runtime-switchable set of backends:
+        // whatever transport the default builder configured (iroh) plus the
+        // broadcast-medium transport. Selection lives in module config
+        // (switchTransport.active, default = first entry = "iroh"), so a
+        // single binary carries every backend and default behavior is
+        // unchanged. See kitsune2-lrl docs/design/broadcast-transport.md.
+        builder.transport = kitsune2_transport_switch::SwitchableTransportFactory::create(vec![
+            ("iroh".into(), builder.transport),
+            (
+                "broadcast".into(),
+                kitsune2_transport_broadcast::BroadcastTransportFactory::create(),
+            ),
+        ]);
+
         // The following are flags only used in tests
         #[cfg(feature = "test_utils")]
         {
@@ -652,7 +671,18 @@ impl HolochainP2pActor {
             })
         });
 
-        let kitsune = builder.build().await?;
+        // Replicates `Builder::build()` (which consumes the builder) so we
+        // can retain the `Arc<Builder>` — and through it the live `Config`
+        // instance — for runtime transport switching.
+        let (kitsune, k2_builder) = {
+            if !builder.config.mark_validated() {
+                builder.validate_config()?;
+            }
+            builder.config.mark_runtime();
+            let builder = Arc::new(builder);
+            let kitsune = builder.kitsune.create(builder.clone()).await?;
+            (kitsune, builder)
+        };
 
         let kitsune2 = kitsune.clone();
         let db_getter = config.get_db_peer_meta.clone();
@@ -676,6 +706,7 @@ impl HolochainP2pActor {
             evt_sender,
             lair_client,
             kitsune,
+            k2_builder,
             get_conductor_store: config.get_conductor_store.clone(),
             pending,
             latency_service,
@@ -2783,6 +2814,20 @@ impl actor::HcP2p for HolochainP2pActor {
 
     fn dump_network_stats(&self) -> BoxFut<'_, HolochainP2pResult<ApiTransportStats>> {
         Box::pin(async move { Ok(self.kitsune.transport().await?.dump_network_stats().await?) })
+    }
+
+    fn switch_transport_backend(&self, backend: String) -> BoxFut<'_, HolochainP2pResult<()>> {
+        Box::pin(async move {
+            // Setting switchTransport.active on the live kitsune2 config
+            // fires the update callback the switch transport registered at
+            // create time, which performs the actual (async) swap.
+            self.k2_builder
+                .config
+                .set_module_config(&serde_json::json!({
+                    "switchTransport": { "active": backend }
+                }))?;
+            Ok(())
+        })
     }
 
     fn target_arcs(

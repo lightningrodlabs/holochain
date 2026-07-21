@@ -403,6 +403,20 @@ pub trait HcP2p: 'static + Send + Sync + std::fmt::Debug + Any {
     fn dump_network_stats(&self)
         -> BoxFut<'_, HolochainP2pResult<kitsune2_api::ApiTransportStats>>;
 
+    /// Switch the active network transport backend at runtime.
+    ///
+    /// `backend` names one of the transports compiled into the conductor
+    /// (currently `"iroh"` or `"broadcast"`). The switch is asynchronous:
+    /// this call succeeds once the request is accepted; the swap itself
+    /// replays handler registrations onto the new backend and re-announces
+    /// the node's listening address, so agent infos are re-signed and
+    /// re-published with the new url. An unknown backend name is rejected
+    /// by the transport and logged, keeping the current backend.
+    ///
+    /// The currently active backend is reported by
+    /// [`HcP2p::dump_network_stats`] as `transport_stats.backend`.
+    fn switch_transport_backend(&self, backend: String) -> BoxFut<'_, HolochainP2pResult<()>>;
+
     /// Get the target arcs of the agents currently in this space.
     fn target_arcs(
         &self,
