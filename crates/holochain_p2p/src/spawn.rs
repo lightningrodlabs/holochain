@@ -230,7 +230,15 @@ impl Default for HolochainP2pConfig {
 }
 
 /// See [`NetworkCompatParams::proto_ver`].
-pub const HCP2P_PROTO_VER: u32 = 2;
+///
+/// FIELD-TEST-ONLY COHORT ISOLATION: bumped from 2 for the Moss hello/PoK
+/// field-test build. Nodes on this build require a proof-of-knowledge handshake
+/// before non-hello traffic flows, which a stock 0.7.0 node will never perform.
+/// Diverging the protocol version makes a patched/stock pair fail fast at
+/// preflight rather than connecting and then silently half-working. Patched
+/// nodes still agree with each other, so wire behavior within the cohort is
+/// unchanged. Restore this to 2 when the build is no longer cohort-isolated.
+pub const HCP2P_PROTO_VER: u32 = 1002;
 
 /// Some parameters used as part of a protocol compatibility check during preflight
 #[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Hash, serde::Serialize, serde::Deserialize)]
