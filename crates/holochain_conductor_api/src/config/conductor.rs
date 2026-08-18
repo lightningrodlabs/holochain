@@ -723,46 +723,22 @@ impl Default for ConductorTuningParams {
     }
 }
 
+// FIELD-TEST-ONLY: this build consumes the kitsune2 hello/PoK access branch,
+// which is based on kitsune2 main and has moved to schemars 1.x, while
+// Holochain is still on schemars 0.9. The two `JsonSchema` traits are distinct
+// types, so the kitsune2 module config types can no longer be embedded in this
+// schema. Emit a permissive schema instead, which still matches the declared
+// type of the `advanced` field (`Option<serde_json::Value>`).
+//
+// This only affects the *generated JSON schema document*. Conductor config
+// parsing goes through serde and is unaffected, so kitsune2 tuning under
+// `advanced` still applies at runtime; it just is not described by the schema.
+// Restore the typed version once Holochain and kitsune2 agree on schemars.
 #[cfg(feature = "schema")]
-fn kitsune2_config_schema(generator: &mut schemars::SchemaGenerator) -> Schema {
-    #[allow(dead_code)]
-    #[derive(JsonSchema)]
-    #[schemars(rename_all = "camelCase")]
-    struct K2Config {
-        #[serde(flatten)]
-        core_bootstrap: Option<kitsune2_core::factories::CoreBootstrapModConfig>,
-        #[serde(flatten)]
-        core_fetch: Option<kitsune2_core::factories::CoreFetchModConfig>,
-        #[serde(flatten)]
-        core_publish: Option<kitsune2_core::factories::CorePublishModConfig>,
-        #[serde(flatten)]
-        core_space: Option<kitsune2_core::factories::CoreSpaceModConfig>,
-        #[serde(flatten)]
-        mem_peer_store: Option<kitsune2_core::factories::MemPeerStoreModConfig>,
-        #[serde(flatten)]
-        k2_gossip: Option<kitsune2_gossip::K2GossipModConfig>,
-        #[cfg(feature = "kitsune2_transport_iroh")]
-        #[serde(flatten)]
-        iroh_transport: Option<kitsune2_transport_iroh::IrohTransportModConfig>,
-    }
-
-    let schema = schemars::schema_for!(Option<K2Config>);
-
-    for (k, v) in schema
-        .get("$defs")
-        .and_then(|d| d.as_object())
-        .expect("No definitions")
-    {
-        if generator
-            .definitions_mut()
-            .insert(k.clone(), v.clone())
-            .is_some()
-        {
-            tracing::warn!("Conflicting definition for {k} in K2Config");
-        }
-    }
-
-    schema
+fn kitsune2_config_schema(_generator: &mut schemars::SchemaGenerator) -> Schema {
+    schemars::json_schema!({
+        "type": ["object", "null"],
+    })
 }
 
 #[cfg(test)]

@@ -13,6 +13,7 @@ use kitsune2_api::DynOpStore;
 use kitsune2_api::DynPeerMetaStore;
 use kitsune2_api::Gossip;
 use kitsune2_api::GossipFactory;
+use kitsune2_api::GossipSpaceHooks;
 use kitsune2_api::GossipStateSummary;
 use kitsune2_api::GossipStateSummaryRequest;
 use kitsune2_api::{
@@ -72,6 +73,7 @@ impl GossipFactory for NoopGossipFactory {
         op_store: DynOpStore,
         transport: DynTransport,
         fetch: DynFetch,
+        hooks: GossipSpaceHooks,
     ) -> BoxFut<'static, K2Result<DynGossip>> {
         Box::pin(async {
             let instance: DynGossip = Arc::new(NoopGossip);

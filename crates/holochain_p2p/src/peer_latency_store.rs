@@ -734,6 +734,9 @@ mod tests {
             fn known_peers(&self) -> &DynKnownPeers {
                 unimplemented!("stub")
             }
+            fn peer_access_state(&self) -> &DynPeerAccessState {
+                unimplemented!("stub")
+            }
             fn current_url(&self) -> Option<Url> {
                 None
             }

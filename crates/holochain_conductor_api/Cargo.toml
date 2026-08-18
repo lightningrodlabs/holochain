@@ -58,10 +58,9 @@ workspace = true
 unstable-migration = []
 unstable-sharding = []
 unstable-countersigning = []
-schema = [
-  "kitsune2_gossip/schema",
-  "kitsune2_core/schema",
-  "kitsune2_transport_iroh?/schema",
-]
+# FIELD-TEST-ONLY: the kitsune2 `schema` sub-features are no longer enabled,
+# because that branch derives JsonSchema from schemars 1.x while Holochain is
+# on 0.9. See `kitsune2_config_schema` in src/config/conductor.rs.
+schema = []
 
 test-utils = []
