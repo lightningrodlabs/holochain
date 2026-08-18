@@ -1,4 +1,4 @@
-use crate::tests::common::spawn_test_bootstrap;
+use crate::tests::common::{spawn_test_bootstrap, wait_for_access_grants};
 use ::fixt::fixt;
 use holo_hash::{
     fixt::{ActionHashFixturator, AgentPubKeyFixturator, DhtOpHashFixturator, DnaHashFixturator},
@@ -362,6 +362,12 @@ async fn get_to_blocked_agent_fails() {
 
     // Exchange peer infos to accelerate bootstrapping.
     exchange_agent_infos(alice.clone(), bob.clone(), &dna_hash).await;
+    // The hello/PoK handshake must complete before non-hello traffic flows;
+    // first fire-and-forget sends during the window are dropped by design —
+    // see branch commit message. Injecting peer infos synchronously above
+    // leaves no natural delay to cover the handshake, so wait for it here.
+    wait_for_access_grants(&alice, dna_hash.clone(), 1).await;
+    wait_for_access_grants(&bob, dna_hash.clone(), 1).await;
 
     // Before the block Alice can make get request and Bob answers them.
     let response = alice
@@ -437,6 +443,12 @@ async fn get_by_blocked_agent_fails() {
 
     // Exchange peer infos to accelerate bootstrapping.
     exchange_agent_infos(alice.clone(), bob.clone(), &dna_hash).await;
+    // The hello/PoK handshake must complete before non-hello traffic flows;
+    // first fire-and-forget sends during the window are dropped by design —
+    // see branch commit message. Injecting peer infos synchronously above
+    // leaves no natural delay to cover the handshake, so wait for it here.
+    wait_for_access_grants(&alice, dna_hash.clone(), 1).await;
+    wait_for_access_grants(&bob, dna_hash.clone(), 1).await;
 
     // Before the block Bob can make get requests and Alice answers them.
     let response = bob

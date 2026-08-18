@@ -1,4 +1,4 @@
-use crate::tests::common::{spawn_test_bootstrap, Handler};
+use crate::tests::common::{spawn_test_bootstrap, wait_for_access_grants, Handler};
 use holochain_keystore::*;
 use holochain_p2p::actor::{GetLinksRequestOptions, NetworkRequestOptions};
 use holochain_p2p::event::*;
@@ -330,6 +330,17 @@ async fn test_call_remote() {
             }
         }
 
+        // The hello/PoK handshake must complete before non-hello traffic flows;
+        // first fire-and-forget sends during the window are dropped by design —
+        // see branch commit message. The loop below unwraps its first
+        // call_remote, so it aborts on the in-window timeout rather than
+        // retrying past it; this makes that first call land after the grant.
+        // Both ends are waited on because the gate is enforced on receipt as
+        // well as on send: a grant on the sender alone still leaves the
+        // receiver free to drop the request.
+        wait_for_access_grants(&hc2, dna_hash.clone(), 1).await;
+        wait_for_access_grants(&hc1, dna_hash.clone(), 1).await;
+
         loop {
             tokio::time::sleep(WAIT_BETWEEN_CALLS).await;
 
@@ -386,11 +397,18 @@ async fn test_remote_signal() {
     let handler = Arc::new(Handler::default());
 
     let (_bootstrap_srv, addr) = spawn_test_bootstrap().await.unwrap();
-    let (agent1, _hc1, _) = spawn_test(dna_hash.clone(), handler.clone(), &addr).await;
+    let (agent1, hc1, _) = spawn_test(dna_hash.clone(), handler.clone(), &addr).await;
     let (_agent2, hc2, _) = spawn_test(dna_hash.clone(), handler.clone(), &addr).await;
 
     // Wait for hc2 to discover agent1 via the bootstrap before sending.
     wait_for_peers(&hc2, dna_hash.clone(), 2).await;
+    // The hello/PoK handshake must complete before non-hello traffic flows;
+    // first fire-and-forget sends during the window are dropped by design —
+    // see branch commit message. Both ends are waited on because the gate is
+    // enforced on receipt as well as on send: a grant on the sender alone
+    // still leaves the receiver free to drop the message.
+    wait_for_access_grants(&hc2, dna_hash.clone(), 1).await;
+    wait_for_access_grants(&hc1, dna_hash.clone(), 1).await;
 
     hc2.send_remote_signal(
         dna_hash,
@@ -1336,11 +1354,18 @@ async fn test_validation_receipts() {
     let handler = Arc::new(Handler::default());
 
     let (_bootstrap_srv, addr) = spawn_test_bootstrap().await.unwrap();
-    let (agent1, _hc1, _) = spawn_test(dna_hash.clone(), handler.clone(), &addr).await;
+    let (agent1, hc1, _) = spawn_test(dna_hash.clone(), handler.clone(), &addr).await;
     let (_agent2, hc2, _) = spawn_test(dna_hash.clone(), handler.clone(), &addr).await;
 
     // Wait for hc2 to discover agent1 via the bootstrap before sending.
     wait_for_peers(&hc2, dna_hash.clone(), 2).await;
+    // The hello/PoK handshake must complete before non-hello traffic flows;
+    // first fire-and-forget sends during the window are dropped by design —
+    // see branch commit message. Both ends are waited on because the gate is
+    // enforced on receipt as well as on send: a grant on the sender alone
+    // still leaves the receiver free to drop the message.
+    wait_for_access_grants(&hc2, dna_hash.clone(), 1).await;
+    wait_for_access_grants(&hc1, dna_hash.clone(), 1).await;
 
     hc2.send_validation_receipts(
         dna_hash,

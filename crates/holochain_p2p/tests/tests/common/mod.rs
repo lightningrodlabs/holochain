@@ -205,6 +205,64 @@ impl HcP2pHandler for Handler {
     }
 }
 
+/// Wait until `hc`'s space for `dna_hash` has recorded an
+/// [`AccessDecision::Granted`] for at least `expected_remote_grants` distinct
+/// remote peer urls.
+///
+/// This is the access-gate sibling of `wait_for_peers`. That helper covers the
+/// iroh peer-discovery race, where a test that sends immediately can outrun the
+/// transport learning a peer's url. This one covers a second and entirely
+/// separate gate introduced by the hello/PoK access layer: knowing a peer is
+/// not the same as being allowed to talk to it. Non-hello traffic toward a peer
+/// with no `Granted` decision is dropped, and a fire-and-forget send dropped
+/// that way is gone for good — the drop only kicks off the handshake, it does
+/// not queue the message. Waiting here makes the grant, not merely discovery,
+/// the precondition for the traffic that follows.
+///
+/// Note that the local agent's own info is in the peer store too and never
+/// carries a grant, so `expected_remote_grants` counts remote peers only: it is
+/// 1 in a two-node test, not 2.
+pub(crate) async fn wait_for_access_grants(
+    hc: &holochain_p2p::actor::DynHcP2p,
+    dna_hash: DnaHash,
+    expected_remote_grants: usize,
+) {
+    const ACCESS_GRANT_TIMEOUT: Duration = Duration::from_secs(30);
+    const WAIT_BETWEEN_POLLS: Duration = Duration::from_millis(10);
+
+    let space_id = dna_hash.to_k2_space();
+    tokio::time::timeout(ACCESS_GRANT_TIMEOUT, async {
+        loop {
+            if let Some(space) = hc.test_kitsune().space_if_exists(space_id.clone()).await {
+                let granted = space
+                    .peer_store()
+                    .get_all()
+                    .await
+                    .unwrap()
+                    .iter()
+                    .filter_map(|info| info.url.clone())
+                    .filter(|url| {
+                        matches!(
+                            space.peer_access_state().get_access_decision(url.clone()),
+                            Ok(Some(PeerAccess {
+                                decision: AccessDecision::Granted,
+                                ..
+                            }))
+                        )
+                    })
+                    .collect::<std::collections::HashSet<_>>()
+                    .len();
+                if granted >= expected_remote_grants {
+                    break;
+                }
+            }
+            tokio::time::sleep(WAIT_BETWEEN_POLLS).await;
+        }
+    })
+    .await
+    .expect("timed out waiting for hello/PoK access grants");
+}
+
 pub(crate) async fn spawn_test_bootstrap(
 ) -> std::io::Result<(kitsune2_bootstrap_srv::BootstrapSrv, SocketAddr)> {
     // We have mixed features between ring and aws_lc so the "lookup by crate features" doesn't
