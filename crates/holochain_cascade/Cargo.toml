@@ -28,7 +28,8 @@ thiserror = "2.0"
 tracing = "0.1"
 opentelemetry = "0.31"
 
-kitsune2_api = "0.5.0"
+# FIELD-TEST-ONLY dependency redirection: see the note in the workspace Cargo.toml.
+kitsune2_api = { path = "/home/eric/code/metacurrency/holochain/kitsune2-lrl-hello/crates/api" }
 
 async-trait = "0.1"
 mockall = { version = "0.13", optional = true }

@@ -30,7 +30,8 @@ holochain_zome_types = { path = "../holochain_zome_types", version = "^0.7.0", f
   "full",
 ] }
 holochain_timestamp = { version = "^0.7.0", path = "../timestamp" }
-kitsune2_api = "0.5.0"
+# FIELD-TEST-ONLY dependency redirection: see the note in the workspace Cargo.toml.
+kitsune2_api = { path = "/home/eric/code/metacurrency/holochain/kitsune2-lrl-hello/crates/api" }
 itertools = { version = "0.14" }
 mr_bundle = { path = "../mr_bundle", features = [
   "fs",
