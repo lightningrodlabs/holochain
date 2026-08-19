@@ -1,0 +1,257 @@
+# Builds release `holochain` and `hc` binaries for the five platforms Moss
+# ships for, from this branch (Holochain 0.7.0 + the kitsune2 hello/PoK
+# access module), and publishes them to a prerelease on this fork.
+#
+# FIELD-TEST-ONLY. Not a Holochain release. See the note at the top of the
+# workspace Cargo.toml.
+#
+# Asset naming deliberately MIRRORS stock holochain releases:
+#
+#   holochain-<target-triple>[.exe]
+#   hc-<target-triple>[.exe]
+#
+# so the Moss-side change (scripts/fetch-fns.mjs + holochain-checksums.json)
+# is only the repo owner and the version/tag, not the filename shape.
+#
+# Portability envelope, matched to stock holochain so the binaries run on
+# the same machines Moss already supports:
+#   - linux:  cargo-zigbuild against glibc 2.34 (`<triple>.2.34`). A plain
+#             runner build would silently inherit the runner's glibc
+#             (2.35 on ubuntu-22.04) and refuse to start on older distros.
+#             zigbuild also gives us the aarch64 cross-compile for free.
+#   - macOS:  MACOSX_DEPLOYMENT_TARGET=11.0, set explicitly for the same
+#             inherited-minimum failure class.
+#   - windows: msvc, no special handling beyond the vendored-OpenSSL
+#             toolchain below.
+#
+# Windows note: holochain pulls libsqlite3-sys with
+# `bundled-sqlcipher-vendored-openssl`, so OpenSSL is compiled from source.
+# That needs NASM and a real Perl -- Git-for-Windows' perl is not enough and
+# fails with "'perl' reported failure with exit code: 2". We point
+# OPENSSL_SRC_PERL at the Strawberry Perl preinstalled on the runner image.
+#
+# Trigger: workflow_dispatch, plus push on this branch. `workflow_dispatch`
+# is only dispatchable once the workflow file exists on the repository's
+# default branch, which this one does not; the push trigger is the reliable
+# path for a topic-branch build. Both are wired up so either works.
+name: build-hello-binaries
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [feat/hello-pok-access-0.7]
+
+env:
+  RELEASE_TAG: holochain-0.7.0-hello.0
+  KITSUNE2_REF: feat/hello-pok-access
+  CARGO_TERM_COLOR: always
+
+concurrency:
+  group: build-hello-binaries
+  cancel-in-progress: false
+
+jobs:
+  build:
+    name: ${{ matrix.target }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: ubuntu-22.04
+            target: x86_64-unknown-linux-gnu
+            zig: true
+          - platform: ubuntu-22.04
+            target: aarch64-unknown-linux-gnu
+            zig: true
+          - platform: macos-15-intel
+            target: x86_64-apple-darwin
+          - platform: macos-latest
+            target: aarch64-apple-darwin
+          - platform: windows-2022
+            target: x86_64-pc-windows-msvc
+    runs-on: ${{ matrix.platform }}
+    timeout-minutes: 300
+    steps:
+      - name: Free disk space (linux runners are tight for holochain release builds)
+        if: runner.os == 'Linux'
+        run: |
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc \
+            /opt/hostedtoolcache/CodeQL /usr/local/share/boost
+          df -h /
+
+      - uses: actions/checkout@v4
+
+      - name: Rust toolchain (pinned by rust-toolchain.toml) + target
+        shell: bash
+        run: |
+          rustup show
+          rustup target add ${{ matrix.target }}
+
+      # Versions pinned to the pair used for the hand-built linux x86_64
+      # binaries, so CI reproduces that toolchain rather than drifting.
+      - name: Install zig + cargo-zigbuild
+        if: matrix.zig
+        shell: bash
+        run: |
+          set -euo pipefail
+          pip3 install --user ziglang==0.13.0
+          python3 -m ziglang version
+          # cargo-zigbuild shells out to a `zig` on PATH; the pip package
+          # only exposes `python3 -m ziglang`, so give it a shim.
+          printf '#!/usr/bin/env bash\nexec python3 -m ziglang "$@"\n' \
+            > "$HOME/.cargo/bin/zig"
+          chmod +x "$HOME/.cargo/bin/zig"
+          zig version
+          curl -sSfL -o /tmp/czb.tar.xz \
+            https://github.com/rust-cross/cargo-zigbuild/releases/download/v0.23.0/cargo-zigbuild-x86_64-unknown-linux-musl.tar.xz
+          tar -xJf /tmp/czb.tar.xz --strip-components=1 \
+            -C "$HOME/.cargo/bin" \
+            cargo-zigbuild-x86_64-unknown-linux-musl/cargo-zigbuild
+          chmod +x "$HOME/.cargo/bin/cargo-zigbuild"
+          cargo-zigbuild --version
+
+      - name: Install NASM (vendored OpenSSL)
+        if: runner.os == 'Windows'
+        uses: ilammy/setup-nasm@v1
+
+      - name: Point vendored OpenSSL at Strawberry Perl
+        if: runner.os == 'Windows'
+        shell: bash
+        run: |
+          echo "OPENSSL_SRC_PERL=C:/Strawberry/perl/bin/perl.exe" >> "$GITHUB_ENV"
+          C:/Strawberry/perl/bin/perl.exe --version
+
+      - name: Cargo cache
+        uses: Swatinem/rust-cache@v2
+        with:
+          key: ${{ matrix.target }}
+          cache-on-failure: true
+
+      - name: Build holochain + hc (release)
+        shell: bash
+        env:
+          MACOSX_DEPLOYMENT_TARGET: "11.0"
+        run: |
+          set -euo pipefail
+          if [ "${{ matrix.zig }}" = "true" ]; then
+            # `.2.34` pins the glibc the binary is linked against, rather
+            # than inheriting the runner's.
+            BUILD=(cargo zigbuild --target "${{ matrix.target }}.2.34")
+          else
+            BUILD=(cargo build --target "${{ matrix.target }}")
+          fi
+          "${BUILD[@]}" --release --locked -p holochain --bin holochain
+          "${BUILD[@]}" --release --locked -p holochain_cli --bin hc
+
+      - name: Smoke check (native targets only)
+        # aarch64-linux is cross-compiled on an x86_64 runner, so it cannot
+        # be executed here; it is exercised on the target machine instead.
+        if: matrix.target != 'aarch64-unknown-linux-gnu'
+        shell: bash
+        run: |
+          EXT=""
+          if [ "${{ runner.os }}" = "Windows" ]; then EXT=".exe"; fi
+          "target/${{ matrix.target }}/release/holochain${EXT}" --version
+          "target/${{ matrix.target }}/release/hc${EXT}" --version
+
+      - name: Report glibc ceiling (linux)
+        if: runner.os == 'Linux'
+        shell: bash
+        run: |
+          # readelf is architecture-agnostic; objdump on this runner is not,
+          # and would refuse the cross-compiled aarch64 binary.
+          for b in holochain hc; do
+            echo "== $b =="
+            readelf -W --dyn-syms "target/${{ matrix.target }}/release/$b" \
+              | grep -o 'GLIBC_[0-9.]*' | sort -uV | tail -5
+          done
+
+      - name: Stage assets under stock-holochain names
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p staged
+          EXT=""
+          if [ "${{ runner.os }}" = "Windows" ]; then EXT=".exe"; fi
+          for b in holochain hc; do
+            cp "target/${{ matrix.target }}/release/${b}${EXT}" \
+               "staged/${b}-${{ matrix.target }}${EXT}"
+          done
+          ls -l staged
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: bins-${{ matrix.target }}
+          path: staged/*
+          if-no-files-found: error
+
+  release:
+    name: publish ${{ github.workflow }} assets
+    needs: build
+    runs-on: ubuntu-22.04
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download all binaries
+        uses: actions/download-artifact@v4
+        with:
+          path: dist
+          pattern: bins-*
+          merge-multiple: true
+
+      - name: Compute sha256 checksums
+        working-directory: dist
+        shell: bash
+        run: |
+          set -euo pipefail
+          sha256sum holochain-* hc-* | sort -k2 > checksums-sha256.txt
+          cat checksums-sha256.txt
+          # Ten binaries: holochain + hc across five targets.
+          test "$(grep -c . checksums-sha256.txt)" -eq 10
+
+      - name: Create the prerelease if it does not exist yet
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          if gh release view "$RELEASE_TAG" >/dev/null 2>&1; then
+            echo "Release $RELEASE_TAG already exists; assets will be clobbered in place."
+            exit 0
+          fi
+          # printf rather than a heredoc: heredoc bodies have to sit at
+          # column 0, which would terminate this YAML block scalar.
+          printf '%s\n' \
+            'Field-test build of Holochain 0.7.0 with the kitsune2 hello/proof-of-knowledge' \
+            'access module. **Not a Holochain release and not for general use** -- it' \
+            'network-partitions from stock Holochain 0.7 by design.' \
+            '' \
+            'Sources:' \
+            '' \
+            '- holochain: https://github.com/lightningrodlabs/holochain/tree/feat/hello-pok-access-0.7' \
+            '- kitsune2: https://github.com/lightningrodlabs/kitsune2/tree/feat/hello-pok-access' \
+            '' \
+            'Assets use the same names as stock holochain releases' \
+            '(`holochain-<triple>`, `hc-<triple>`, `.exe` on Windows), so Moss only needs' \
+            'to repoint the repo and the version. Linux binaries target glibc 2.34;' \
+            'macOS binaries target 11.0.' \
+            > notes.md
+          gh release create "$RELEASE_TAG" \
+            --target "${{ github.sha }}" \
+            --prerelease \
+            --title "Holochain 0.7.0 + kitsune2 hello/PoK (field test)" \
+            --notes-file notes.md
+
+      - name: Upload assets (clobbering any earlier or manual uploads)
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          gh release upload "$RELEASE_TAG" \
+            dist/holochain-* dist/hc-* dist/checksums-sha256.txt --clobber
+          gh release view "$RELEASE_TAG" --json assets \
+            --jq '.assets[] | "\(.name)\t\(.size)"'
