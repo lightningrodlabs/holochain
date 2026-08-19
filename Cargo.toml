@@ -84,11 +84,15 @@ lto = true
 # FIELD-TEST-ONLY BUILD -- NOT FOR RELEASE.
 #
 # This tree consumes the kitsune2 hello/proof-of-knowledge access branch
-# (kitsune2-lrl-hello, feat/hello-pok-access, 0.6.0-dev.0) for a Moss field
-# test. That branch is 0.6.0-dev.0, so it cannot satisfy the `0.5.0` version
-# requirements this release pins, and `[patch.crates-io]` here would be
-# silently ignored. Instead, every kitsune2_* dependency is rewritten in its
-# own crate manifest to a bare `path` dependency with no version field.
+# (https://github.com/lightningrodlabs/kitsune2, branch feat/hello-pok-access,
+# 0.6.0-dev.0) for a Moss field test. That branch is 0.6.0-dev.0, so it cannot
+# satisfy the `0.5.0` version requirements this release pins, and
+# `[patch.crates-io]` here would be silently ignored. Instead, every kitsune2_*
+# dependency is rewritten in its own crate manifest to a bare `git` dependency
+# with no version field, rev-pinned for reproducibility:
+#
+#   { git = "https://github.com/lightningrodlabs/kitsune2",
+#     rev = "e01e55ee506b09b4445c538b6d344939148f94ea" }
 #
 # Grep for "FIELD-TEST-ONLY dependency redirection" to find them all. Revert
 # those rewrites back to `"0.5.0"` version requirements before releasing.

@@ -11,7 +11,7 @@ edition = "2021"
 # reminder - do not use workspace deps
 [dependencies]
 # FIELD-TEST-ONLY dependency redirection: see the note in the workspace Cargo.toml.
-kitsune2_transport_iroh = { path = "/home/eric/code/metacurrency/holochain/kitsune2-lrl-hello/crates/transport_iroh", optional = true, default-features = false }
+kitsune2_transport_iroh = { git = "https://github.com/lightningrodlabs/kitsune2", rev = "e01e55ee506b09b4445c538b6d344939148f94ea", optional = true, default-features = false }
 derive_more = { version = "2.0", features = ["from"] }
 holo_hash = { version = "^0.7.0", path = "../holo_hash", features = [
   "full",
@@ -23,9 +23,9 @@ holochain_zome_types = { version = "^0.7.0", path = "../holochain_zome_types" }
 holochain_util = { version = "^0.7.0", default-features = false, path = "../holochain_util", features = [
   "jsonschema",
 ] }
-kitsune2_api = { path = "/home/eric/code/metacurrency/holochain/kitsune2-lrl-hello/crates/api" }
-kitsune2_core = { path = "/home/eric/code/metacurrency/holochain/kitsune2-lrl-hello/crates/core" }
-kitsune2_gossip = { path = "/home/eric/code/metacurrency/holochain/kitsune2-lrl-hello/crates/gossip", optional = true }
+kitsune2_api = { git = "https://github.com/lightningrodlabs/kitsune2", rev = "e01e55ee506b09b4445c538b6d344939148f94ea" }
+kitsune2_core = { git = "https://github.com/lightningrodlabs/kitsune2", rev = "e01e55ee506b09b4445c538b6d344939148f94ea" }
+kitsune2_gossip = { git = "https://github.com/lightningrodlabs/kitsune2", rev = "e01e55ee506b09b4445c538b6d344939148f94ea", optional = true }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1"
 yaml_serde = "0.10"

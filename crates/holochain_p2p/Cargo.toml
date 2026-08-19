@@ -41,15 +41,15 @@ opentelemetry = "0.31"
 strum_macros = "0.27.2"
 
 # FIELD-TEST-ONLY dependency redirection: see the note in the workspace Cargo.toml.
-kitsune2 = { path = "/home/eric/code/metacurrency/holochain/kitsune2-lrl-hello/crates/kitsune2", default-features = false, features = [
+kitsune2 = { git = "https://github.com/lightningrodlabs/kitsune2", rev = "e01e55ee506b09b4445c538b6d344939148f94ea", default-features = false, features = [
   "transport-iroh",
 ] }
-kitsune2_bootstrap_srv = { path = "/home/eric/code/metacurrency/holochain/kitsune2-lrl-hello/crates/bootstrap_srv", default-features = false, features = [
+kitsune2_bootstrap_srv = { git = "https://github.com/lightningrodlabs/kitsune2", rev = "e01e55ee506b09b4445c538b6d344939148f94ea", default-features = false, features = [
   "iroh-relay",
 ] }
-kitsune2_api = { path = "/home/eric/code/metacurrency/holochain/kitsune2-lrl-hello/crates/api" }
-kitsune2_core = { path = "/home/eric/code/metacurrency/holochain/kitsune2-lrl-hello/crates/core" }
-kitsune2_transport_iroh = { path = "/home/eric/code/metacurrency/holochain/kitsune2-lrl-hello/crates/transport_iroh", default-features = false }
+kitsune2_api = { git = "https://github.com/lightningrodlabs/kitsune2", rev = "e01e55ee506b09b4445c538b6d344939148f94ea" }
+kitsune2_core = { git = "https://github.com/lightningrodlabs/kitsune2", rev = "e01e55ee506b09b4445c538b6d344939148f94ea" }
+kitsune2_transport_iroh = { git = "https://github.com/lightningrodlabs/kitsune2", rev = "e01e55ee506b09b4445c538b6d344939148f94ea", default-features = false }
 # TEMPORARY PIN (see PR #5849): iroh 1.0.0 otherwise resolves quinn 0.11.11 /
 # quinn-proto 0.11.15 / socket2 0.6.4, which regress QUIC connection establishment
 # on Windows and break the zero-arc integration tests. These are transitive deps of

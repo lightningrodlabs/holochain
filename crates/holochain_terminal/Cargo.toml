@@ -32,9 +32,9 @@ holochain_conductor_api = { version = "^0.7.0", path = "../holochain_conductor_a
 holochain_types = { version = "^0.7.0", path = "../holochain_types" }
 tokio = { version = "1.36.0", features = ["full"] }
 # FIELD-TEST-ONLY dependency redirection: see the note in the workspace Cargo.toml.
-kitsune2_api = { path = "/home/eric/code/metacurrency/holochain/kitsune2-lrl-hello/crates/api" }
-kitsune2_core = { path = "/home/eric/code/metacurrency/holochain/kitsune2-lrl-hello/crates/core" }
-kitsune2_bootstrap_client = { path = "/home/eric/code/metacurrency/holochain/kitsune2-lrl-hello/crates/bootstrap_client" }
+kitsune2_api = { git = "https://github.com/lightningrodlabs/kitsune2", rev = "e01e55ee506b09b4445c538b6d344939148f94ea" }
+kitsune2_core = { git = "https://github.com/lightningrodlabs/kitsune2", rev = "e01e55ee506b09b4445c538b6d344939148f94ea" }
+kitsune2_bootstrap_client = { git = "https://github.com/lightningrodlabs/kitsune2", rev = "e01e55ee506b09b4445c538b6d344939148f94ea" }
 
 [lints]
 workspace = true

@@ -45,7 +45,7 @@ async-recursion = "1.1"
 bytes = "1"
 
 # FIELD-TEST-ONLY dependency redirection: see the note in the workspace Cargo.toml.
-kitsune2_api = { path = "/home/eric/code/metacurrency/holochain/kitsune2-lrl-hello/crates/api" }
+kitsune2_api = { git = "https://github.com/lightningrodlabs/kitsune2", rev = "e01e55ee506b09b4445c538b6d344939148f94ea" }
 
 tempfile = { version = "3.3", optional = true }
 base64 = { version = "0.22", optional = true }
