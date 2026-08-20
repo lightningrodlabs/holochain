@@ -52,8 +52,8 @@ holochain_timestamp = { version = "^0.7.0", path = "../timestamp" }
 human-panic = "2.0"
 itertools = { version = "0.14" }
 # FIELD-TEST-ONLY dependency redirection: see the note in the workspace Cargo.toml.
-kitsune2_api = { git = "https://github.com/lightningrodlabs/kitsune2", rev = "e01e55ee506b09b4445c538b6d344939148f94ea" }
-kitsune2_core = { git = "https://github.com/lightningrodlabs/kitsune2", rev = "e01e55ee506b09b4445c538b6d344939148f94ea" }
+kitsune2_api = { git = "https://github.com/lightningrodlabs/kitsune2", rev = "91d9258bfe2818b4b0d4487c631f22ff56eaf255" }
+kitsune2_core = { git = "https://github.com/lightningrodlabs/kitsune2", rev = "91d9258bfe2818b4b0d4487c631f22ff56eaf255" }
 mockall = "0.13"
 mr_bundle = { version = "^0.7.0", path = "../mr_bundle", features = [
   "fs",
@@ -103,7 +103,7 @@ matches = { version = "0.1.8", optional = true }
 holochain_wasm_test_utils = { version = "^0.7.0", path = "../test_utils/wasm", optional = true }
 holochain_test_wasm_common = { version = "^0.7.0", path = "../test_utils/wasm_common", optional = true }
 unwrap_to = { version = "0.1.0", optional = true }
-kitsune2_bootstrap_srv = { git = "https://github.com/lightningrodlabs/kitsune2", rev = "e01e55ee506b09b4445c538b6d344939148f94ea", default-features = false, optional = true }
+kitsune2_bootstrap_srv = { git = "https://github.com/lightningrodlabs/kitsune2", rev = "91d9258bfe2818b4b0d4487c631f22ff56eaf255", default-features = false, optional = true }
 schemars = "0.9"
 
 [target.'cfg(unix)'.dependencies]
@@ -129,7 +129,7 @@ tokio = { version = "1.36.0", features = ["full", "test-util"] }
 tokio-tungstenite = "0.27"
 predicates = "3.1"
 assert2 = "0.3.15"
-kitsune2_test_utils = { git = "https://github.com/lightningrodlabs/kitsune2", rev = "e01e55ee506b09b4445c538b6d344939148f94ea" }
+kitsune2_test_utils = { git = "https://github.com/lightningrodlabs/kitsune2", rev = "91d9258bfe2818b4b0d4487c631f22ff56eaf255" }
 rand_dalek = { version = "0.8", package = "rand" }
 
 [build-dependencies]

@@ -92,7 +92,7 @@ lto = true
 # with no version field, rev-pinned for reproducibility:
 #
 #   { git = "https://github.com/lightningrodlabs/kitsune2",
-#     rev = "e01e55ee506b09b4445c538b6d344939148f94ea" }
+#     rev = "91d9258bfe2818b4b0d4487c631f22ff56eaf255" }
 #
 # Grep for "FIELD-TEST-ONLY dependency redirection" to find them all. Revert
 # those rewrites back to `"0.5.0"` version requirements before releasing.

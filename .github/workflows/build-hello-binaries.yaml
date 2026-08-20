@@ -42,8 +42,13 @@ on:
     branches: [feat/hello-pok-access-0.7]
 
 env:
-  RELEASE_TAG: holochain-0.7.0-hello.0
+  # Each field-test build gets its OWN tag. Never repoint an existing one:
+  # published Moss builds pin the checksums of the assets under the tag they
+  # were cut against, so an earlier tag must stay byte-for-byte intact for
+  # provenance. Bump this when the kitsune2 rev below changes.
+  RELEASE_TAG: holochain-0.7.0-hello.1
   KITSUNE2_REF: feat/hello-pok-access
+  KITSUNE2_REV: 91d9258bfe2818b4b0d4487c631f22ff56eaf255
   CARGO_TERM_COLOR: always
 
 concurrency:
@@ -229,23 +234,30 @@ jobs:
             'access module. **Not a Holochain release and not for general use** -- it' \
             'network-partitions from stock Holochain 0.7 by design.' \
             '' \
+            'Adds the cross-relay preflight fix over `holochain-0.7.0-hello.0`:' \
+            '`own_url_for_preflight` now falls back to the global URL for peers on an' \
+            'unknown relay instead of refusing, and relay comparison normalizes trailing' \
+            'dots -- so nodes reached via different relays can complete preflight.' \
+            '' \
             'Sources:' \
             '' \
-            '- holochain: https://github.com/lightningrodlabs/holochain/tree/feat/hello-pok-access-0.7' \
-            '- kitsune2: https://github.com/lightningrodlabs/kitsune2/tree/feat/hello-pok-access' \
+            "- holochain: https://github.com/lightningrodlabs/holochain/tree/feat/hello-pok-access-0.7 (\`${GITHUB_SHA}\`)" \
+            "- kitsune2: https://github.com/lightningrodlabs/kitsune2/tree/${KITSUNE2_REF} (\`${KITSUNE2_REV}\`)" \
             '' \
             'Assets use the same names as stock holochain releases' \
             '(`holochain-<triple>`, `hc-<triple>`, `.exe` on Windows), so Moss only needs' \
             'to repoint the repo and the version. Linux binaries target glibc 2.34;' \
             'macOS binaries target 11.0.' \
+            '' \
+            '`holochain-0.7.0-hello.0` is left untouched for provenance.' \
             > notes.md
           gh release create "$RELEASE_TAG" \
             --target "${{ github.sha }}" \
             --prerelease \
-            --title "Holochain 0.7.0 + kitsune2 hello/PoK (field test)" \
+            --title "Holochain 0.7.0 + kitsune2 hello/PoK (field test, hello.1)" \
             --notes-file notes.md
 
-      - name: Upload assets (clobbering any earlier or manual uploads)
+      - name: Upload assets (clobber makes re-runs of this tag idempotent)
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         shell: bash
