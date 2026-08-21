@@ -4420,7 +4420,7 @@ dependencies = [
 [[package]]
 name = "kitsune2"
 version = "0.6.0-dev.0"
-source = "git+https://github.com/lightningrodlabs/kitsune2?rev=91d9258bfe2818b4b0d4487c631f22ff56eaf255#91d9258bfe2818b4b0d4487c631f22ff56eaf255"
+source = "git+https://github.com/lightningrodlabs/kitsune2?rev=09d3365446cad7b4a4d44de6c50bdcbddf1bb06b#09d3365446cad7b4a4d44de6c50bdcbddf1bb06b"
 dependencies = [
  "bytes",
  "kitsune2_api",
@@ -4433,7 +4433,7 @@ dependencies = [
 [[package]]
 name = "kitsune2_api"
 version = "0.6.0-dev.0"
-source = "git+https://github.com/lightningrodlabs/kitsune2?rev=91d9258bfe2818b4b0d4487c631f22ff56eaf255#91d9258bfe2818b4b0d4487c631f22ff56eaf255"
+source = "git+https://github.com/lightningrodlabs/kitsune2?rev=09d3365446cad7b4a4d44de6c50bdcbddf1bb06b#09d3365446cad7b4a4d44de6c50bdcbddf1bb06b"
 dependencies = [
  "base64 0.23.1",
  "bytes",
@@ -4449,7 +4449,7 @@ dependencies = [
 [[package]]
 name = "kitsune2_bootstrap_client"
 version = "0.6.0-dev.0"
-source = "git+https://github.com/lightningrodlabs/kitsune2?rev=91d9258bfe2818b4b0d4487c631f22ff56eaf255#91d9258bfe2818b4b0d4487c631f22ff56eaf255"
+source = "git+https://github.com/lightningrodlabs/kitsune2?rev=09d3365446cad7b4a4d44de6c50bdcbddf1bb06b#09d3365446cad7b4a4d44de6c50bdcbddf1bb06b"
 dependencies = [
  "base64 0.23.1",
  "kitsune2_api",
@@ -4463,7 +4463,7 @@ dependencies = [
 [[package]]
 name = "kitsune2_bootstrap_srv"
 version = "0.6.0-dev.0"
-source = "git+https://github.com/lightningrodlabs/kitsune2?rev=91d9258bfe2818b4b0d4487c631f22ff56eaf255#91d9258bfe2818b4b0d4487c631f22ff56eaf255"
+source = "git+https://github.com/lightningrodlabs/kitsune2?rev=09d3365446cad7b4a4d44de6c50bdcbddf1bb06b#09d3365446cad7b4a4d44de6c50bdcbddf1bb06b"
 dependencies = [
  "async-channel",
  "axum",
@@ -4499,7 +4499,7 @@ dependencies = [
 [[package]]
 name = "kitsune2_core"
 version = "0.6.0-dev.0"
-source = "git+https://github.com/lightningrodlabs/kitsune2?rev=91d9258bfe2818b4b0d4487c631f22ff56eaf255#91d9258bfe2818b4b0d4487c631f22ff56eaf255"
+source = "git+https://github.com/lightningrodlabs/kitsune2?rev=09d3365446cad7b4a4d44de6c50bdcbddf1bb06b#09d3365446cad7b4a4d44de6c50bdcbddf1bb06b"
 dependencies = [
  "base64 0.23.1",
  "bytes",
@@ -4522,7 +4522,7 @@ dependencies = [
 [[package]]
 name = "kitsune2_dht"
 version = "0.6.0-dev.0"
-source = "git+https://github.com/lightningrodlabs/kitsune2?rev=91d9258bfe2818b4b0d4487c631f22ff56eaf255#91d9258bfe2818b4b0d4487c631f22ff56eaf255"
+source = "git+https://github.com/lightningrodlabs/kitsune2?rev=09d3365446cad7b4a4d44de6c50bdcbddf1bb06b#09d3365446cad7b4a4d44de6c50bdcbddf1bb06b"
 dependencies = [
  "bytes",
  "kitsune2_api",
@@ -4532,7 +4532,7 @@ dependencies = [
 [[package]]
 name = "kitsune2_gossip"
 version = "0.6.0-dev.0"
-source = "git+https://github.com/lightningrodlabs/kitsune2?rev=91d9258bfe2818b4b0d4487c631f22ff56eaf255#91d9258bfe2818b4b0d4487c631f22ff56eaf255"
+source = "git+https://github.com/lightningrodlabs/kitsune2?rev=09d3365446cad7b4a4d44de6c50bdcbddf1bb06b#09d3365446cad7b4a4d44de6c50bdcbddf1bb06b"
 dependencies = [
  "bytes",
  "futures",
@@ -4551,7 +4551,7 @@ dependencies = [
 [[package]]
 name = "kitsune2_test_utils"
 version = "0.6.0-dev.0"
-source = "git+https://github.com/lightningrodlabs/kitsune2?rev=91d9258bfe2818b4b0d4487c631f22ff56eaf255#91d9258bfe2818b4b0d4487c631f22ff56eaf255"
+source = "git+https://github.com/lightningrodlabs/kitsune2?rev=09d3365446cad7b4a4d44de6c50bdcbddf1bb06b#09d3365446cad7b4a4d44de6c50bdcbddf1bb06b"
 dependencies = [
  "axum",
  "bytes",
@@ -4567,7 +4567,7 @@ dependencies = [
 [[package]]
 name = "kitsune2_transport_iroh"
 version = "0.6.0-dev.0"
-source = "git+https://github.com/lightningrodlabs/kitsune2?rev=91d9258bfe2818b4b0d4487c631f22ff56eaf255#91d9258bfe2818b4b0d4487c631f22ff56eaf255"
+source = "git+https://github.com/lightningrodlabs/kitsune2?rev=09d3365446cad7b4a4d44de6c50bdcbddf1bb06b#09d3365446cad7b4a4d44de6c50bdcbddf1bb06b"
 dependencies = [
  "base64 0.23.1",
  "bytes",

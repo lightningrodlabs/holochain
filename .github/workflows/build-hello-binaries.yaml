@@ -46,9 +46,9 @@ env:
   # published Moss builds pin the checksums of the assets under the tag they
   # were cut against, so an earlier tag must stay byte-for-byte intact for
   # provenance. Bump this when the kitsune2 rev below changes.
-  RELEASE_TAG: holochain-0.7.0-hello.1
-  KITSUNE2_REF: feat/hello-pok-access
-  KITSUNE2_REV: 91d9258bfe2818b4b0d4487c631f22ff56eaf255
+  RELEASE_TAG: holochain-0.7.0-hello.2
+  KITSUNE2_REF: feat/hello-pok-access-qad
+  KITSUNE2_REV: 09d3365446cad7b4a4d44de6c50bdcbddf1bb06b
   CARGO_TERM_COLOR: always
 
 concurrency:
@@ -234,10 +234,11 @@ jobs:
             'access module. **Not a Holochain release and not for general use** -- it' \
             'network-partitions from stock Holochain 0.7 by design.' \
             '' \
-            'Adds the cross-relay preflight fix over `holochain-0.7.0-hello.0`:' \
-            '`own_url_for_preflight` now falls back to the global URL for peers on an' \
-            'unknown relay instead of refusing, and relay comparison normalizes trailing' \
-            'dots -- so nodes reached via different relays can complete preflight.' \
+            'Adds the QAD fix over `holochain-0.7.0-hello.1`: re-inserting the relay' \
+            'for each space no longer disables QUIC address discovery, so the endpoint' \
+            'keeps its public address and NAT traversal advertises it. Without this,' \
+            'peers behind different NATs only ever exchanged LAN candidates and stayed' \
+            'relayed (`direct=false`).' \
             '' \
             'Sources:' \
             '' \
@@ -249,12 +250,12 @@ jobs:
             'to repoint the repo and the version. Linux binaries target glibc 2.34;' \
             'macOS binaries target 11.0.' \
             '' \
-            '`holochain-0.7.0-hello.0` is left untouched for provenance.' \
+            '`holochain-0.7.0-hello.0` and `hello.1` are left untouched for provenance.' \
             > notes.md
           gh release create "$RELEASE_TAG" \
             --target "${{ github.sha }}" \
             --prerelease \
-            --title "Holochain 0.7.0 + kitsune2 hello/PoK (field test, hello.1)" \
+            --title "Holochain 0.7.0 + kitsune2 hello/PoK (field test, hello.2)" \
             --notes-file notes.md
 
       - name: Upload assets (clobber makes re-runs of this tag idempotent)
