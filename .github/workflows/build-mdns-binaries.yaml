@@ -43,10 +43,16 @@ on:
     branches: [feat/mdns-bootstrap-0.7.0-hello]
 
 env:
-  # Each field-test build gets its OWN tag. Never repoint an existing one:
-  # published Moss builds pin the checksums of the assets under the tag they
-  # were cut against, so an earlier tag must stay byte-for-byte intact for
-  # provenance. Bump this when the kitsune2 rev below changes.
+  # Tag policy, enforced by the release job below:
+  #   - the tag is created for the commit that first publishes it;
+  #   - a later run for that SAME commit re-uploads its assets, so a failed
+  #     matrix leg can be retried without minting a new tag;
+  #   - a run for a DIFFERENT commit against an existing tag FAILS, and says
+  #     to bump RELEASE_TAG.
+  # The last rule is what makes the tag mean something: published Moss builds
+  # pin the sha256 of the assets under the tag they were cut against, so a tag
+  # that moved to another commit would silently invalidate that provenance.
+  # Bump this whenever the source below changes, kitsune2 rev included.
   RELEASE_TAG: holochain-0.7.0-mdns.0
   KITSUNE2_REF: feat/mdns-bootstrap-hello
   KITSUNE2_REV: 123e9d29043a752713e17e1601be4564f2e81c6f
@@ -208,6 +214,36 @@ jobs:
           pattern: bins-*
           merge-multiple: true
 
+      - name: Verify the kitsune2 rev this build actually used
+        shell: bash
+        run: |
+          set -euo pipefail
+          # The release notes name KITSUNE2_REV as the source of these
+          # binaries. That is only true if the lockfile the matrix built
+          # `--locked` against resolves to it.
+          LOCK_REVS=$(grep -o 'lightningrodlabs/kitsune2?rev=[0-9a-f]*' Cargo.lock \
+            | sed 's/.*rev=//' | sort -u)
+          if [ "$LOCK_REVS" != "$KITSUNE2_REV" ]; then
+            echo "Cargo.lock resolves the kitsune2 fork to:"
+            echo "$LOCK_REVS"
+            echo "but KITSUNE2_REV is $KITSUNE2_REV."
+            exit 1
+          fi
+          # And only if no crate manifest pins a different rev. Counting the
+          # lines that merely name the fork against the lines that name it
+          # with the expected rev also catches a manifest that split `git`
+          # and `rev` across lines, which the pattern above would miss.
+          NAMED=$(grep -h 'lightningrodlabs/kitsune2' crates/*/Cargo.toml | wc -l)
+          PINNED=$(grep -h "lightningrodlabs/kitsune2\", rev = \"$KITSUNE2_REV\"" \
+            crates/*/Cargo.toml | wc -l)
+          if [ "$NAMED" != "$PINNED" ]; then
+            echo "$NAMED manifest lines name the kitsune2 fork, $PINNED pin $KITSUNE2_REV:"
+            grep -Hn 'lightningrodlabs/kitsune2' crates/*/Cargo.toml \
+              | grep -v "rev = \"$KITSUNE2_REV\"" || true
+            exit 1
+          fi
+          echo "kitsune2 $KITSUNE2_REV: Cargo.lock and $PINNED manifest pins agree"
+
       - name: Compute sha256 checksums
         working-directory: dist
         shell: bash
@@ -218,15 +254,26 @@ jobs:
           # Ten binaries: holochain + hc across five targets.
           test "$(grep -c . checksums-sha256.txt)" -eq 10
 
-      - name: Create the prerelease if it does not exist yet
+      - name: Enforce the tag policy, then create the prerelease
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         shell: bash
         run: |
           set -euo pipefail
-          if gh release view "$RELEASE_TAG" >/dev/null 2>&1; then
-            echo "Release $RELEASE_TAG already exists; assets will be clobbered in place."
-            exit 0
+          # `--target ${{ github.sha }}` below is what puts a commit sha in
+          # targetCommitish, so an existing release can be compared against
+          # the commit this run is building.
+          if EXISTING=$(gh release view "$RELEASE_TAG" \
+              --json targetCommitish --jq .targetCommitish 2>/dev/null); then
+            if [ "$EXISTING" = "${{ github.sha }}" ]; then
+              echo "$RELEASE_TAG was published from this commit; re-uploading its assets."
+              exit 0
+            fi
+            echo "$RELEASE_TAG was published from $EXISTING, this run is ${{ github.sha }}."
+            echo "A tag stays with the commit that first published it, so that the"
+            echo "checksums Moss pins against it keep meaning what they meant."
+            echo "Bump RELEASE_TAG in this workflow and re-run."
+            exit 1
           fi
           # printf rather than a heredoc: heredoc bodies have to sit at
           # column 0, which would terminate this YAML block scalar.
@@ -243,10 +290,16 @@ jobs:
             'id, never the space id itself, so a LAN listener learns that some space is' \
             'present but not which one.' \
             '' \
-            'This is purely additive on top of `holochain-0.7.0-hello.2`: the hello/PoK' \
-            'access module and `HCP2P_PROTO_VER=1002` are unchanged, so hello.2 and' \
-            'mdns.0 nodes are on the same cohort and interoperate. A node built here' \
-            'with mDNS disabled behaves exactly like a hello.2 node.' \
+            'Additive on top of `holochain-0.7.0-hello.2`: the hello/PoK access module' \
+            'and `HCP2P_PROTO_VER=1002` are unchanged, so hello.2 and mdns.0 nodes are' \
+            'on the same cohort and interoperate.' \
+            '' \
+            'mDNS itself is inert unless enabled, but the kitsune2 rev underneath is not' \
+            'only mDNS: it also changes how every node handles unresponsive marks. A' \
+            'peer connecting clears its mark, and a failed dial no longer marks a peer' \
+            'that already has a live connection. Both make a node retry peers it would' \
+            'previously have written off, and both are observable in the peer-meta rows' \
+            'even with mDNS off.' \
             '' \
             'Sources:' \
             '' \
