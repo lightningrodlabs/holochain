@@ -1,6 +1,7 @@
 mod blocks;
 mod common;
 mod local_agent;
+mod mdns_discovery;
 mod node_messaging;
 mod op_store;
 mod peer_meta_store;
