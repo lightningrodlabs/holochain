@@ -53,9 +53,9 @@ env:
   # pin the sha256 of the assets under the tag they were cut against, so a tag
   # that moved to another commit would silently invalidate that provenance.
   # Bump this whenever the source below changes, kitsune2 rev included.
-  RELEASE_TAG: holochain-0.7.0-mdns.1
+  RELEASE_TAG: holochain-0.7.0-mdns.2
   KITSUNE2_REF: feat/mdns-bootstrap-hello
-  KITSUNE2_REV: a742244604c5b7d0994c213108abd67824dd9afc
+  KITSUNE2_REV: 66debe2fa5d76afd548d05d53fdb11eec7502362
   CARGO_TERM_COLOR: always
 
 concurrency:
@@ -291,8 +291,8 @@ jobs:
             'present but not which one.' \
             '' \
             'Additive on top of `holochain-0.7.0-hello.2`: the hello/PoK access module' \
-            'and `HCP2P_PROTO_VER=1002` are unchanged, so hello.2 and mdns.1 nodes are' \
-            'on the same cohort and interoperate.' \
+            'and `HCP2P_PROTO_VER=1002` are unchanged, so hello.2, mdns.1 and mdns.2 nodes' \
+            'are on the same cohort and interoperate.' \
             '' \
             'mDNS itself is inert unless enabled, but the kitsune2 rev underneath is not' \
             'only mDNS: it also changes how every node handles unresponsive marks. A' \
@@ -307,8 +307,17 @@ jobs:
             'LAN-dialable -- it stayed invisible to its neighbours even after the link' \
             'came up. The lookup is now re-created on a local address change, so such a' \
             'node joins the LAN as soon as it has an address. Found in a two-machine' \
-            'field test. Nothing else changed: `holochain-0.7.0-mdns.0` and its assets' \
-            'are left untouched.' \
+            'field test.' \
+            '' \
+            'What mdns.2 fixes over mdns.1: the relay-known-down LAN dial bypass now' \
+            'accepts IPv6 global-unicast addresses that share a /64 with one of the' \
+            'node'"'"'s own. Before, that bypass dialled only RFC 1918, IPv4 link-local and' \
+            'IPv6 ULA addresses, so on a LAN numbered by SLAAC with global IPv6 every' \
+            'resolved neighbour was rejected and a node whose relay had died could not' \
+            'originate LAN dials until the relay returned or it restarted. IPv4' \
+            'handling, the relay-up path, IPv6 link-local and carrier-grade NAT space' \
+            'are unchanged. Nothing else changed: the `holochain-0.7.0-mdns.0` and' \
+            '`holochain-0.7.0-mdns.1` tags and their assets are left untouched.' \
             '' \
             'Sources:' \
             '' \
@@ -325,7 +334,7 @@ jobs:
           gh release create "$RELEASE_TAG" \
             --target "${{ github.sha }}" \
             --prerelease \
-            --title "Holochain 0.7.0 + kitsune2 hello/PoK + mDNS LAN discovery (field test, mdns.1)" \
+            --title "Holochain 0.7.0 + kitsune2 hello/PoK + mDNS LAN discovery (field test, mdns.2)" \
             --notes-file notes.md
 
       - name: Upload assets (clobber makes re-runs of this tag idempotent)

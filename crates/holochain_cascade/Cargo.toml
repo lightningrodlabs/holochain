@@ -29,7 +29,7 @@ tracing = "0.1"
 opentelemetry = "0.31"
 
 # FIELD-TEST-ONLY dependency redirection: see the note in the workspace Cargo.toml.
-kitsune2_api = { git = "https://github.com/lightningrodlabs/kitsune2", rev = "a742244604c5b7d0994c213108abd67824dd9afc" }
+kitsune2_api = { git = "https://github.com/lightningrodlabs/kitsune2", rev = "66debe2fa5d76afd548d05d53fdb11eec7502362" }
 
 async-trait = "0.1"
 mockall = { version = "0.13", optional = true }
