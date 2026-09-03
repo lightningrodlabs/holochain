@@ -97,8 +97,21 @@ lto = true
 #   { git = "https://github.com/lightningrodlabs/kitsune2",
 #     rev = "123e9d29043a752713e17e1601be4564f2e81c6f" }
 #
-# Grep for "FIELD-TEST-ONLY dependency redirection" to find them all. Revert
-# those rewrites back to `"0.5.0"` version requirements before releasing.
+# Grep for "FIELD-TEST-ONLY dependency redirection" to find them all.
+#
+# Reverting to the released 0.5.0 crates is more than swapping the version
+# requirements back, because 0.5.0 has none of the mDNS work. The full
+# checklist:
+#   - rewrite every kitsune2_* git dependency back to a `"0.5.0"` version
+#     requirement;
+#   - drop the `kitsune2_bootstrap_mdns` dependency from
+#     crates/holochain_p2p/Cargo.toml (the crate does not exist in 0.5.0);
+#   - drop `features = ["mdns"]` from `kitsune2_transport_iroh` there;
+#   - drop the `CompositeBootstrapFactory` composition and the merged-config
+#     mDNS check in crates/holochain_p2p/src/spawn/actor.rs;
+#   - adapt `BootWrapFact::create` and `test::NoopBootstrapFactory::create`
+#     back to the 3-argument `BootstrapFactory::create` (no `tx: DynTransport`
+#     parameter in 0.5.0).
 #
 # To build against an in-progress local kitsune2 checkout instead of the pinned
 # rev, add — and do NOT commit — a patch table for the git source, covering

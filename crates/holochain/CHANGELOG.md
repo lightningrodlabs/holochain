@@ -7,6 +7,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## Unreleased
 
+- FIELD-TEST-ONLY: added mDNS LAN peer discovery, configured through two `network.advanced` keys that are one setting. `mdnsBootstrap.enabled` announces this conductor's peer url on the LAN for each space it has joined — under a fingerprint derived from the space, never the space id itself — and dials the peers it hears announcing the same one, alongside whatever bootstrap server is configured rather than instead of it. `irohTransport.enableLanDiscovery` turns on the iroh transport's own LAN address lookup, which is what turns such a peer url into a direct connection with no relay in the path. Neither key is a typed `NetworkConfig` field, so a config using them stays readable by a stock binary, which ignores unknown kitsune2 module keys. Setting the first without the second is refused at startup: the conductor would discover peers it could never dial.
+
 ## 0.7.0
 
 ## 0.7.0-rc.5
