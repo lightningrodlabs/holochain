@@ -53,9 +53,9 @@ env:
   # pin the sha256 of the assets under the tag they were cut against, so a tag
   # that moved to another commit would silently invalidate that provenance.
   # Bump this whenever the source below changes, kitsune2 rev included.
-  RELEASE_TAG: holochain-0.7.0-mdns.0
+  RELEASE_TAG: holochain-0.7.0-mdns.1
   KITSUNE2_REF: feat/mdns-bootstrap-hello
-  KITSUNE2_REV: 123e9d29043a752713e17e1601be4564f2e81c6f
+  KITSUNE2_REV: a742244604c5b7d0994c213108abd67824dd9afc
   CARGO_TERM_COLOR: always
 
 concurrency:
@@ -291,7 +291,7 @@ jobs:
             'present but not which one.' \
             '' \
             'Additive on top of `holochain-0.7.0-hello.2`: the hello/PoK access module' \
-            'and `HCP2P_PROTO_VER=1002` are unchanged, so hello.2 and mdns.0 nodes are' \
+            'and `HCP2P_PROTO_VER=1002` are unchanged, so hello.2 and mdns.1 nodes are' \
             'on the same cohort and interoperate.' \
             '' \
             'mDNS itself is inert unless enabled, but the kitsune2 rev underneath is not' \
@@ -300,6 +300,15 @@ jobs:
             'that already has a live connection. Both make a node retry peers it would' \
             'previously have written off, and both are observable in the peer-meta rows' \
             'even with mDNS off.' \
+            '' \
+            'What mdns.1 fixes over mdns.0: LAN discovery now rebinds when the local' \
+            'address set changes. In mdns.0 the mDNS lookup was created once at' \
+            'startup, so a node booted with its network interface down never became' \
+            'LAN-dialable -- it stayed invisible to its neighbours even after the link' \
+            'came up. The lookup is now re-created on a local address change, so such a' \
+            'node joins the LAN as soon as it has an address. Found in a two-machine' \
+            'field test. Nothing else changed: `holochain-0.7.0-mdns.0` and its assets' \
+            'are left untouched.' \
             '' \
             'Sources:' \
             '' \
@@ -316,7 +325,7 @@ jobs:
           gh release create "$RELEASE_TAG" \
             --target "${{ github.sha }}" \
             --prerelease \
-            --title "Holochain 0.7.0 + kitsune2 hello/PoK + mDNS LAN discovery (field test, mdns.0)" \
+            --title "Holochain 0.7.0 + kitsune2 hello/PoK + mDNS LAN discovery (field test, mdns.1)" \
             --notes-file notes.md
 
       - name: Upload assets (clobber makes re-runs of this tag idempotent)

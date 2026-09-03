@@ -28,7 +28,7 @@ holochain_websocket = { version = "^0.7.0", path = "../holochain_websocket" }
 holochain_zome_types = { version = "^0.7.0", path = "../holochain_zome_types" }
 holochain_serialized_bytes = "0.0.57"
 # FIELD-TEST-ONLY dependency redirection: see the note in the workspace Cargo.toml.
-kitsune2_api = { git = "https://github.com/lightningrodlabs/kitsune2", rev = "123e9d29043a752713e17e1601be4564f2e81c6f" }
+kitsune2_api = { git = "https://github.com/lightningrodlabs/kitsune2", rev = "a742244604c5b7d0994c213108abd67824dd9afc" }
 lair_keystore_api = { version = "0.7.1", optional = true }
 parking_lot = "0.12.1"
 rand = { version = "0.8" }
@@ -44,8 +44,8 @@ holochain = { version = "^0.7.0", path = "../holochain", default-features = fals
 ] }
 holochain_wasm_test_utils = { version = "^0.7.0", path = "../test_utils/wasm" }
 
-kitsune2_core = { git = "https://github.com/lightningrodlabs/kitsune2", rev = "123e9d29043a752713e17e1601be4564f2e81c6f" }
-kitsune2_test_utils = { git = "https://github.com/lightningrodlabs/kitsune2", rev = "123e9d29043a752713e17e1601be4564f2e81c6f" }
+kitsune2_core = { git = "https://github.com/lightningrodlabs/kitsune2", rev = "a742244604c5b7d0994c213108abd67824dd9afc" }
+kitsune2_test_utils = { git = "https://github.com/lightningrodlabs/kitsune2", rev = "a742244604c5b7d0994c213108abd67824dd9afc" }
 yaml_serde = "0.10"
 
 [features]

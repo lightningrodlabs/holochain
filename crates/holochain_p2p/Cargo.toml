@@ -41,21 +41,21 @@ opentelemetry = "0.31"
 strum_macros = "0.27.2"
 
 # FIELD-TEST-ONLY dependency redirection: see the note in the workspace Cargo.toml.
-kitsune2 = { git = "https://github.com/lightningrodlabs/kitsune2", rev = "123e9d29043a752713e17e1601be4564f2e81c6f", default-features = false, features = [
+kitsune2 = { git = "https://github.com/lightningrodlabs/kitsune2", rev = "a742244604c5b7d0994c213108abd67824dd9afc", default-features = false, features = [
   "transport-iroh",
 ] }
-kitsune2_bootstrap_srv = { git = "https://github.com/lightningrodlabs/kitsune2", rev = "123e9d29043a752713e17e1601be4564f2e81c6f", default-features = false, features = [
+kitsune2_bootstrap_srv = { git = "https://github.com/lightningrodlabs/kitsune2", rev = "a742244604c5b7d0994c213108abd67824dd9afc", default-features = false, features = [
   "iroh-relay",
 ] }
-kitsune2_api = { git = "https://github.com/lightningrodlabs/kitsune2", rev = "123e9d29043a752713e17e1601be4564f2e81c6f" }
-kitsune2_core = { git = "https://github.com/lightningrodlabs/kitsune2", rev = "123e9d29043a752713e17e1601be4564f2e81c6f" }
+kitsune2_api = { git = "https://github.com/lightningrodlabs/kitsune2", rev = "a742244604c5b7d0994c213108abd67824dd9afc" }
+kitsune2_core = { git = "https://github.com/lightningrodlabs/kitsune2", rev = "a742244604c5b7d0994c213108abd67824dd9afc" }
 # mDNS LAN peer discovery, composed alongside the configured bootstrap in
 # `spawn::actor`. Inert unless `mdnsBootstrap.enabled` is set in config.
-kitsune2_bootstrap_mdns = { git = "https://github.com/lightningrodlabs/kitsune2", rev = "123e9d29043a752713e17e1601be4564f2e81c6f" }
+kitsune2_bootstrap_mdns = { git = "https://github.com/lightningrodlabs/kitsune2", rev = "a742244604c5b7d0994c213108abd67824dd9afc" }
 # The `mdns` feature compiles in iroh's own LAN address lookup, which is what
 # makes an mDNS-discovered peer dialable without a working relay. It stays
 # inert unless `irohTransport.enableLanDiscovery` is set in config.
-kitsune2_transport_iroh = { git = "https://github.com/lightningrodlabs/kitsune2", rev = "123e9d29043a752713e17e1601be4564f2e81c6f", default-features = false, features = [
+kitsune2_transport_iroh = { git = "https://github.com/lightningrodlabs/kitsune2", rev = "a742244604c5b7d0994c213108abd67824dd9afc", default-features = false, features = [
   "mdns",
 ] }
 # TEMPORARY PIN (see PR #5849): iroh 1.0.0 otherwise resolves quinn 0.11.11 /
