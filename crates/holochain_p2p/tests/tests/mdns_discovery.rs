@@ -10,7 +10,10 @@
 //! both point at addresses that accept no connections.
 //!
 //! mDNS needs a real multicast-capable interface, which sandboxed CI runners
-//! rarely have, so the test only runs when `K2_MDNS_IT` is set.
+//! rarely have, so these tests are gated on `KITSUNE2_LAN_TEST` — the same
+//! switch kitsune2's own LAN tests use (`kitsune2/tests/mdns_lan.rs`,
+//! `transport_iroh/tests/offline_relay.rs`), so one env var turns on every
+//! test in the stack that needs multicast.
 
 use crate::tests::common::{wait_for_access_grants, Handler};
 use ::fixt::fixt;
@@ -25,19 +28,18 @@ use std::{sync::Arc, time::Duration};
 /// A bootstrap server url that accepts no connections.
 const UNREACHABLE_BOOTSTRAP: &str = "http://127.0.0.1:1";
 
-/// A relay url that accepts no connections (the TCP discard port).
-const UNREACHABLE_RELAY: &str = "https://127.0.0.1:9/relay";
+/// Relay urls that accept no connections (the TCP discard port). Two of them,
+/// so that a node's announced peer url can be made to name a relay the other
+/// node does not share.
+const UNREACHABLE_RELAY_A: &str = "https://127.0.0.1:9/relay";
+const UNREACHABLE_RELAY_B: &str = "https://127.0.0.2:9/relay";
 
 /// How long to wait for the mDNS announce/browse/dial round trip. Probe
 /// tiebreaking between responders sharing one host can delay the first
 /// announcement by ~20s, so this is generous.
-const DISCOVERY_TIMEOUT: Duration = Duration::from_secs(120);
+const DISCOVERY_TIMEOUT_MS: u64 = 120_000;
 
-const WAIT_BETWEEN_POLLS: Duration = Duration::from_millis(250);
-
-fn should_run() -> bool {
-    std::env::var("K2_MDNS_IT").is_ok()
-}
+const POLL_INTERVAL_MS: u64 = 250;
 
 /// A service type private to this test run, so that neither another node on
 /// the same LAN nor a previous run's lingering records can take part. The
@@ -47,7 +49,11 @@ fn per_run_service_type() -> String {
     format!("_hcmdns{tag:08x}._udp.local.")
 }
 
-async fn spawn_mdns_node(dna_hash: DnaHash, service_type: &str) -> (AgentPubKey, actor::DynHcP2p) {
+async fn spawn_mdns_node(
+    dna_hash: DnaHash,
+    service_type: &str,
+    relay_url: &str,
+) -> (AgentPubKey, actor::DynHcP2p) {
     let db_peer_meta = holochain_state::peer_metadata_store::PeerMetaStore::new(
         holochain_state::data::test_open_db(PeerMetaStore::new(Arc::new(dna_hash.clone())))
             .await
@@ -78,7 +84,7 @@ async fn spawn_mdns_node(dna_hash: DnaHash, service_type: &str) -> (AgentPubKey,
             "redialIntervalMs": 5_000,
         },
         "irohTransport": {
-            "relayUrl": UNREACHABLE_RELAY,
+            "relayUrl": relay_url,
             "enableLanDiscovery": true,
         }
     });
@@ -117,59 +123,82 @@ async fn spawn_mdns_node(dna_hash: DnaHash, service_type: &str) -> (AgentPubKey,
     (agent, hc)
 }
 
-#[tokio::test(flavor = "multi_thread")]
-async fn two_nodes_discover_each_other_over_mdns_without_bootstrap_or_relay() {
-    if !should_run() {
-        eprintln!("skipping mdns test (set K2_MDNS_IT=1 on a host with multicast)");
-        return;
-    }
+/// Stand two nodes up on the given relay urls and assert the full chain:
+/// each node's peer store gains the other's agent, and the hello/PoK access
+/// module grants the peer on both sides.
+async fn assert_two_nodes_discover_each_other(relay_a: &str, relay_b: &str) {
     test_run();
 
     let service_type = per_run_service_type();
-    tracing::info!(%service_type, "mdns e2e service type");
+    tracing::info!(%service_type, %relay_a, %relay_b, "mdns e2e service type");
 
     let dna_hash = fixt!(DnaHash);
-    let space_id = dna_hash.to_k2_space();
 
-    let (agent_a, hc_a) = spawn_mdns_node(dna_hash.clone(), &service_type).await;
-    let (agent_b, hc_b) = spawn_mdns_node(dna_hash.clone(), &service_type).await;
-
-    let store_a = hc_a
-        .test_kitsune()
-        .space(space_id.clone(), None)
-        .await
-        .unwrap()
-        .peer_store()
-        .clone();
-    let store_b = hc_b
-        .test_kitsune()
-        .space(space_id.clone(), None)
-        .await
-        .unwrap()
-        .peer_store()
-        .clone();
+    let (agent_a, hc_a) = spawn_mdns_node(dna_hash.clone(), &service_type, relay_a).await;
+    let (agent_b, hc_b) = spawn_mdns_node(dna_hash.clone(), &service_type, relay_b).await;
 
     let k2_agent_a = agent_a.to_k2_agent();
     let k2_agent_b = agent_b.to_k2_agent();
 
-    let deadline = std::time::Instant::now() + DISCOVERY_TIMEOUT;
-    loop {
-        let a_sees_b = store_a.get(k2_agent_b.clone()).await.unwrap().is_some();
-        let b_sees_a = store_b.get(k2_agent_a.clone()).await.unwrap().is_some();
-        if a_sees_b && b_sees_a {
-            break;
-        }
-        if std::time::Instant::now() > deadline {
-            panic!(
-                "timed out waiting for mdns discovery: a_sees_b={a_sees_b}, b_sees_a={b_sees_a}"
-            );
-        }
-        tokio::time::sleep(WAIT_BETWEEN_POLLS).await;
-    }
+    retry_fn_until_timeout(
+        || async {
+            let a_sees_b = hc_a
+                .peer_store(dna_hash.clone())
+                .await
+                .unwrap()
+                .get(k2_agent_b.clone())
+                .await
+                .unwrap()
+                .is_some();
+            let b_sees_a = hc_b
+                .peer_store(dna_hash.clone())
+                .await
+                .unwrap()
+                .get(k2_agent_a.clone())
+                .await
+                .unwrap()
+                .is_some();
+            tracing::info!(a_sees_b, b_sees_a, "mdns e2e progress");
+            a_sees_b && b_sees_a
+        },
+        Some(DISCOVERY_TIMEOUT_MS),
+        Some(POLL_INTERVAL_MS),
+    )
+    .await
+    .expect("timed out waiting for both peer stores to hold the other agent");
 
     // Knowing the peer is not the same as being allowed to talk to it: the
     // hello/PoK exchange over the mDNS-dialled connection is what makes the
     // discovery usable.
     wait_for_access_grants(&hc_a, dna_hash.clone(), 1).await;
     wait_for_access_grants(&hc_b, dna_hash.clone(), 1).await;
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn two_nodes_discover_each_other_over_mdns_without_bootstrap_or_relay() {
+    if std::env::var("KITSUNE2_LAN_TEST").is_err() {
+        eprintln!(
+            "skipping two_nodes_discover_each_other_over_mdns_without_bootstrap_or_relay: set KITSUNE2_LAN_TEST=1 to run"
+        );
+        return;
+    }
+
+    assert_two_nodes_discover_each_other(UNREACHABLE_RELAY_A, UNREACHABLE_RELAY_A).await;
+}
+
+/// The same chain with the two nodes announcing peer urls derived from
+/// DIFFERENT relays. The hello base lets a peer on another relay through
+/// preflight, and a real LAN mixes relays — a laptop configured for one
+/// deployment's relay next to a laptop configured for another's — so the
+/// LAN path has to work without the two agreeing on a relay string.
+#[tokio::test(flavor = "multi_thread")]
+async fn two_nodes_discover_each_other_over_mdns_on_different_relays() {
+    if std::env::var("KITSUNE2_LAN_TEST").is_err() {
+        eprintln!(
+            "skipping two_nodes_discover_each_other_over_mdns_on_different_relays: set KITSUNE2_LAN_TEST=1 to run"
+        );
+        return;
+    }
+
+    assert_two_nodes_discover_each_other(UNREACHABLE_RELAY_A, UNREACHABLE_RELAY_B).await;
 }
