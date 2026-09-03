@@ -521,10 +521,11 @@ impl kitsune2_api::BootstrapFactory for BootWrapFact {
         builder: Arc<Builder>,
         peer_store: DynPeerStore,
         space: SpaceId,
+        tx: DynTransport,
     ) -> BoxFut<'static, K2Result<DynBootstrap>> {
         let compat = self.compat.clone();
         let preflight = self.preflight.clone();
-        let orig_fut = self.orig.create(builder, peer_store, space);
+        let orig_fut = self.orig.create(builder, peer_store, space, tx);
         Box::pin(async move {
             let orig = orig_fut.await?;
             let out: DynBootstrap = Arc::new(BootWrap {

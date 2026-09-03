@@ -153,6 +153,7 @@ impl BootstrapFactory for NoopBootstrapFactory {
         _builder: Arc<Builder>,
         _peer_store: DynPeerStore,
         _space_id: SpaceId,
+        _tx: DynTransport,
     ) -> BoxFut<'static, K2Result<DynBootstrap>> {
         Box::pin(async {
             let instance: DynBootstrap = Arc::new(NoopBootstrap);

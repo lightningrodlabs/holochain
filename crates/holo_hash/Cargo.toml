@@ -31,7 +31,7 @@ futures = { version = "0.3", optional = true }
 holochain_serialized_bytes = { version = "=0.0.57", optional = true }
 holochain_util = { version = "^0.7.0", path = "../holochain_util", default-features = false }
 # FIELD-TEST-ONLY dependency redirection: see the note in the workspace Cargo.toml.
-kitsune2_api = { git = "https://github.com/lightningrodlabs/kitsune2", rev = "09d3365446cad7b4a4d44de6c50bdcbddf1bb06b", optional = true }
+kitsune2_api = { git = "https://github.com/lightningrodlabs/kitsune2", rev = "123e9d29043a752713e17e1601be4564f2e81c6f", optional = true }
 must_future = { version = "0.1", optional = true }
 proptest = { version = "1", optional = true }
 proptest-derive = { version = "0", optional = true }

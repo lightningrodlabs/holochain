@@ -83,19 +83,32 @@ lto = true
 [patch.crates-io]
 # FIELD-TEST-ONLY BUILD -- NOT FOR RELEASE.
 #
-# This tree consumes the kitsune2 hello/proof-of-knowledge access branch
-# (https://github.com/lightningrodlabs/kitsune2, branch feat/hello-pok-access,
-# 0.6.0-dev.0) for a Moss field test. That branch is 0.6.0-dev.0, so it cannot
-# satisfy the `0.5.0` version requirements this release pins, and
-# `[patch.crates-io]` here would be silently ignored. Instead, every kitsune2_*
-# dependency is rewritten in its own crate manifest to a bare `git` dependency
-# with no version field, rev-pinned for reproducibility:
+# This tree consumes the kitsune2 mDNS LAN discovery branch
+# (https://github.com/lightningrodlabs/kitsune2, branch
+# feat/mdns-bootstrap-hello) for a Moss field test. That branch is additive on
+# top of the hello/proof-of-knowledge access work: same access protocol and
+# same cohort version, plus a `kitsune2_bootstrap_mdns` module that announces
+# and dials LAN peers, and an iroh transport that can reach them without a
+# relay. Its version does not satisfy the version requirements this release
+# pins, and `[patch.crates-io]` here would be silently ignored. Instead, every
+# kitsune2_* dependency is rewritten in its own crate manifest to a bare `git`
+# dependency with no version field, rev-pinned for reproducibility:
 #
 #   { git = "https://github.com/lightningrodlabs/kitsune2",
-#     rev = "09d3365446cad7b4a4d44de6c50bdcbddf1bb06b" }
+#     rev = "123e9d29043a752713e17e1601be4564f2e81c6f" }
 #
 # Grep for "FIELD-TEST-ONLY dependency redirection" to find them all. Revert
 # those rewrites back to `"0.5.0"` version requirements before releasing.
+#
+# To build against an in-progress local kitsune2 checkout instead of the pinned
+# rev, add — and do NOT commit — a patch table for the git source, covering
+# every kitsune2 crate in the graph:
+#
+#   [patch."https://github.com/lightningrodlabs/kitsune2"]
+#   kitsune2_api = { path = "../kitsune2-lrl/crates/api" }
+#   ... likewise core, kitsune2, dht, gossip, bootstrap_srv,
+#   bootstrap_client, test_utils, transport_iroh, bootstrap_mdns
+#
 # kitsune2_api = { path = "../kitsune2/crates/api" }
 # kitsune2_core = { path = "../kitsune2/crates/core" }
 # kitsune2 = { path = "../kitsune2/crates/kitsune2" }
@@ -105,6 +118,7 @@ lto = true
 # kitsune2_bootstrap_client = { path = "../kitsune2/crates/bootstrap_client" }
 # kitsune2_test_utils = { path = "../kitsune2/crates/test_utils" }
 # kitsune2_transport_iroh = { path = "../kitsune2/crates/transport_iroh" }
+# kitsune2_bootstrap_mdns = { path = "../kitsune2/crates/bootstrap_mdns" }
 # task-motel = { path = "../task-motel" }
 # influxive-child-svc = { path = "../influxive/crates/influxive-child-svc" }
 # influxive-otel = { path = "../influxive/crates/influxive-otel" }

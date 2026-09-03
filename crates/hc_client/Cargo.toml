@@ -32,8 +32,8 @@ holochain_util = { version = "^0.7.0", path = "../holochain_util", features = [
   "pw",
 ] }
 # FIELD-TEST-ONLY dependency redirection: see the note in the workspace Cargo.toml.
-kitsune2_api = { git = "https://github.com/lightningrodlabs/kitsune2", rev = "09d3365446cad7b4a4d44de6c50bdcbddf1bb06b" }
-kitsune2_core = { git = "https://github.com/lightningrodlabs/kitsune2", rev = "09d3365446cad7b4a4d44de6c50bdcbddf1bb06b" }
+kitsune2_api = { git = "https://github.com/lightningrodlabs/kitsune2", rev = "123e9d29043a752713e17e1601be4564f2e81c6f" }
+kitsune2_core = { git = "https://github.com/lightningrodlabs/kitsune2", rev = "123e9d29043a752713e17e1601be4564f2e81c6f" }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 yaml_serde = "0.10"

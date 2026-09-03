@@ -45,7 +45,7 @@ async-recursion = "1.1"
 bytes = "1"
 
 # FIELD-TEST-ONLY dependency redirection: see the note in the workspace Cargo.toml.
-kitsune2_api = { git = "https://github.com/lightningrodlabs/kitsune2", rev = "09d3365446cad7b4a4d44de6c50bdcbddf1bb06b" }
+kitsune2_api = { git = "https://github.com/lightningrodlabs/kitsune2", rev = "123e9d29043a752713e17e1601be4564f2e81c6f" }
 
 tempfile = { version = "3.3", optional = true }
 base64 = { version = "0.22", optional = true }
