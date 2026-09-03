@@ -598,6 +598,17 @@ impl HolochainP2pActor {
             .encode()?,
         ));
 
+        // Run mDNS LAN discovery next to whatever bootstrap module is
+        // configured, so that a locally published agent info is announced on
+        // the LAN as well as to the bootstrap server, and peers heard on the
+        // LAN get dialled. The mDNS module produces a no-op bootstrap unless
+        // `mdnsBootstrap.enabled` is set in config, so composing it
+        // unconditionally leaves default behaviour unchanged.
+        builder.bootstrap = kitsune2_core::factories::CompositeBootstrapFactory::create(vec![
+            builder.bootstrap,
+            kitsune2_bootstrap_mdns::MdnsBootstrapFactory::create(),
+        ]);
+
         // build with whatever bootstrap module is configured,
         // but wrap it in our bootstrap wrapper.
         builder.bootstrap = Arc::new(BootWrapFact {
