@@ -656,6 +656,32 @@ impl HolochainP2pActor {
             )?;
         }
 
+        // mDNS discovery hands the transport peer urls that are only reachable
+        // over the LAN, and the iroh transport can only turn such a url into a
+        // usable path when its own LAN address lookup is on. The two keys are
+        // one setting: with only the announce half, a node discovers peers it
+        // can never dial, which is worth refusing at startup.
+        let merged_kitsune2_config: serde_json::Value = builder.config.get_module_config()?;
+        let flag = |pointer: &str| {
+            merged_kitsune2_config
+                .pointer(pointer)
+                .and_then(serde_json::Value::as_bool)
+                .unwrap_or(false)
+        };
+        let mdns_bootstrap = flag("/mdnsBootstrap/enabled");
+        let lan_discovery = flag("/irohTransport/enableLanDiscovery");
+        if mdns_bootstrap && !lan_discovery {
+            return Err(HolochainP2pError::other(
+                "mdnsBootstrap.enabled is set without irohTransport.enableLanDiscovery: \
+                 mDNS discovery dials peers over the LAN only when the iroh transport's \
+                 LAN address lookup is on; set irohTransport.enableLanDiscovery = true \
+                 or disable mdnsBootstrap",
+            ));
+        }
+        tracing::info!(
+            "mDNS LAN discovery mdns_bootstrap={mdns_bootstrap} lan_discovery={lan_discovery}"
+        );
+
         let pending = Arc::new_cyclic(|this| {
             Mutex::new(Pending {
                 this: this.clone(),
@@ -3096,6 +3122,63 @@ mod tests {
         HolochainP2pActor::create(config, holochain_keystore::test_keystore())
             .await
             .expect("failed to create actor")
+    }
+
+    /// Build an actor with `network_config` merged in, handing back the result
+    /// so that a refused configuration can be asserted on.
+    async fn create_with_network_config(
+        network_config: serde_json::Value,
+    ) -> HolochainP2pResult<Arc<dyn HcP2p>> {
+        HolochainP2pActor::create(
+            HolochainP2pConfig {
+                network_config: Some(network_config),
+                ..Default::default()
+            },
+            holochain_keystore::test_keystore(),
+        )
+        .await
+    }
+
+    /// mDNS discovery hands the transport a peer url it can only reach over
+    /// the LAN, so the two knobs are one setting. Turning on the announce half
+    /// alone yields a node that discovers peers and can never dial them, which
+    /// is worth refusing at startup rather than debugging in the field.
+    #[tokio::test(flavor = "multi_thread")]
+    async fn mdns_without_lan_discovery_is_refused() {
+        let err = create_with_network_config(serde_json::json!({
+            "mdnsBootstrap": { "enabled": true },
+        }))
+        .await
+        .expect_err("mdns without lan discovery must not build");
+        let msg = err.to_string();
+        assert!(msg.contains("mdnsBootstrap"), "{msg}");
+        assert!(msg.contains("irohTransport.enableLanDiscovery"), "{msg}");
+
+        let err = create_with_network_config(serde_json::json!({
+            "mdnsBootstrap": { "enabled": true },
+            "irohTransport": { "enableLanDiscovery": false },
+        }))
+        .await
+        .expect_err("mdns with lan discovery off must not build");
+        let msg = err.to_string();
+        assert!(msg.contains("irohTransport.enableLanDiscovery"), "{msg}");
+    }
+
+    #[tokio::test(flavor = "multi_thread")]
+    async fn mdns_with_lan_discovery_is_accepted() {
+        create_with_network_config(serde_json::json!({
+            "mdnsBootstrap": { "enabled": true },
+            "irohTransport": { "enableLanDiscovery": true },
+        }))
+        .await
+        .expect("mdns alongside lan discovery must build");
+    }
+
+    #[tokio::test(flavor = "multi_thread")]
+    async fn neither_mdns_knob_set_is_accepted() {
+        create_with_network_config(serde_json::json!({}))
+            .await
+            .expect("a config naming neither knob must build");
     }
 
     async fn test_p2p_actor_iroh() -> Arc<dyn HcP2p> {
