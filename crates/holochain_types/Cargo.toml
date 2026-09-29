@@ -31,7 +31,7 @@ holochain_zome_types = { path = "../holochain_zome_types", version = "^0.7.0", f
 ] }
 holochain_timestamp = { version = "^0.7.0", path = "../timestamp" }
 # FIELD-TEST-ONLY dependency redirection: see the note in the workspace Cargo.toml.
-kitsune2_api = { git = "https://github.com/lightningrodlabs/kitsune2", rev = "66debe2fa5d76afd548d05d53fdb11eec7502362" }
+kitsune2_api = { git = "https://github.com/lightningrodlabs/kitsune2", rev = "d8b99b09096ac495ea7152cf48f9d4a1ac3cd0a8" }
 itertools = { version = "0.14" }
 mr_bundle = { path = "../mr_bundle", features = [
   "fs",

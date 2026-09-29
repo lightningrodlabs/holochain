@@ -40,7 +40,7 @@ name: build-mdns-binaries
 on:
   workflow_dispatch:
   push:
-    branches: [feat/mdns-bootstrap-0.7.0-hello]
+    branches: [moss-0.16]
 
 env:
   # Tag policy, enforced by the release job below:
@@ -53,9 +53,9 @@ env:
   # pin the sha256 of the assets under the tag they were cut against, so a tag
   # that moved to another commit would silently invalidate that provenance.
   # Bump this whenever the source below changes, kitsune2 rev included.
-  RELEASE_TAG: holochain-0.7.0-mdns.2
-  KITSUNE2_REF: feat/mdns-bootstrap-hello
-  KITSUNE2_REV: 66debe2fa5d76afd548d05d53fdb11eec7502362
+  RELEASE_TAG: holochain-0.7.0-mdns.3
+  KITSUNE2_REF: moss-0.16
+  KITSUNE2_REV: d8b99b09096ac495ea7152cf48f9d4a1ac3cd0a8
   CARGO_TERM_COLOR: always
 
 concurrency:
@@ -291,7 +291,7 @@ jobs:
             'present but not which one.' \
             '' \
             'Additive on top of `holochain-0.7.0-hello.2`: the hello/PoK access module' \
-            'and `HCP2P_PROTO_VER=1002` are unchanged, so hello.2, mdns.1 and mdns.2 nodes' \
+            'and `HCP2P_PROTO_VER=1002` are unchanged, so hello.2 and every mdns.* node' \
             'are on the same cohort and interoperate.' \
             '' \
             'mDNS itself is inert unless enabled, but the kitsune2 rev underneath is not' \
@@ -316,12 +316,22 @@ jobs:
             'resolved neighbour was rejected and a node whose relay had died could not' \
             'originate LAN dials until the relay returned or it restarted. IPv4' \
             'handling, the relay-up path, IPv6 link-local and carrier-grade NAT space' \
-            'are unchanged. Nothing else changed: the `holochain-0.7.0-mdns.0` and' \
-            '`holochain-0.7.0-mdns.1` tags and their assets are left untouched.' \
+            'are unchanged.' \
+            '' \
+            'What mdns.3 changes over mdns.2: kitsune2 is rebased onto current upstream' \
+            'main (branch `moss-0.16`) instead of v0.6.0-dev.0. That brings upstream'"'"'s' \
+            'simultaneous-open send preservation (the release-0.5 fix, identical to' \
+            'v0.5.2 in the iroh transport), the per-space relay and bootstrap override' \
+            'fixes, known-peer endpoint ordering by advertisement timestamp, and' \
+            'gossip-message attribution. The fork'"'"'s own QAD relay re-insert commit is' \
+            'replaced by the identical upstream one. Upstream'"'"'s reverted PR #641 (transport' \
+            'creation failing when no relay URL arrives, fatal offline) is not in this' \
+            'base. The hello/PoK and mDNS behaviour is unchanged. The earlier' \
+            '`holochain-0.7.0-mdns.*` tags and their assets are left untouched.' \
             '' \
             'Sources:' \
             '' \
-            "- holochain: https://github.com/lightningrodlabs/holochain/tree/feat/mdns-bootstrap-0.7.0-hello (\`${GITHUB_SHA}\`)" \
+            "- holochain: https://github.com/lightningrodlabs/holochain/tree/${GITHUB_REF_NAME} (\`${GITHUB_SHA}\`)" \
             "- kitsune2: https://github.com/lightningrodlabs/kitsune2/tree/${KITSUNE2_REF} (\`${KITSUNE2_REV}\`)" \
             '' \
             'Assets use the same names as stock holochain releases' \
@@ -334,7 +344,7 @@ jobs:
           gh release create "$RELEASE_TAG" \
             --target "${{ github.sha }}" \
             --prerelease \
-            --title "Holochain 0.7.0 + kitsune2 hello/PoK + mDNS LAN discovery (field test, mdns.2)" \
+            --title "Holochain 0.7.0 + kitsune2 hello/PoK + mDNS LAN discovery (field test, ${RELEASE_TAG#holochain-0.7.0-})" \
             --notes-file notes.md
 
       - name: Upload assets (clobber makes re-runs of this tag idempotent)

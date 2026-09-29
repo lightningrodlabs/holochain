@@ -83,9 +83,10 @@ lto = true
 [patch.crates-io]
 # FIELD-TEST-ONLY BUILD -- NOT FOR RELEASE.
 #
-# This tree consumes the kitsune2 mDNS LAN discovery branch
-# (https://github.com/lightningrodlabs/kitsune2, branch
-# feat/mdns-bootstrap-hello) for a Moss field test. That branch is additive on
+# This tree consumes the kitsune2 branch Moss 0.16 ships on
+# (https://github.com/lightningrodlabs/kitsune2, branch moss-0.16): upstream
+# kitsune2 main plus the hello/proof-of-knowledge access work and mDNS LAN
+# discovery, for a Moss field test. The mDNS work is additive on
 # top of the hello/proof-of-knowledge access work: same access protocol and
 # same cohort version, plus a `kitsune2_bootstrap_mdns` module that announces
 # and dials LAN peers, and an iroh transport that can reach them without a
@@ -95,7 +96,7 @@ lto = true
 # dependency with no version field, rev-pinned for reproducibility:
 #
 #   { git = "https://github.com/lightningrodlabs/kitsune2",
-#     rev = "66debe2fa5d76afd548d05d53fdb11eec7502362" }
+#     rev = "d8b99b09096ac495ea7152cf48f9d4a1ac3cd0a8" }
 #
 # Grep for "FIELD-TEST-ONLY dependency redirection" to find them all.
 #
