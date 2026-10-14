@@ -1,5 +1,5 @@
 # Builds release `holochain` and `hc` binaries for the five platforms Moss
-# ships for, from this branch (Holochain 0.7.0 + the kitsune2 hello/PoK
+# ships for, from this branch (Holochain 0.7.1-rc.2 + the kitsune2 hello/PoK
 # access module + mDNS LAN discovery), and publishes them to a prerelease on
 # this fork.
 #
@@ -40,7 +40,7 @@ name: build-mdns-binaries
 on:
   workflow_dispatch:
   push:
-    branches: [moss-0.16]
+    branches: [moss-0.16, moss-0.16-0.7.1]
 
 env:
   # Tag policy, enforced by the release job below:
@@ -53,7 +53,7 @@ env:
   # pin the sha256 of the assets under the tag they were cut against, so a tag
   # that moved to another commit would silently invalidate that provenance.
   # Bump this whenever the source below changes, kitsune2 rev included.
-  RELEASE_TAG: holochain-0.7.0-mdns.3
+  RELEASE_TAG: holochain-0.7.1-rc.2-mdns.4
   KITSUNE2_REF: moss-0.16
   KITSUNE2_REV: d8b99b09096ac495ea7152cf48f9d4a1ac3cd0a8
   CARGO_TERM_COLOR: always
@@ -278,7 +278,7 @@ jobs:
           # printf rather than a heredoc: heredoc bodies have to sit at
           # column 0, which would terminate this YAML block scalar.
           printf '%s\n' \
-            'Field-test build of Holochain 0.7.0 with the kitsune2 hello/proof-of-knowledge' \
+            'Field-test build of Holochain 0.7.1-rc.2 with the kitsune2 hello/proof-of-knowledge' \
             'access module **plus mDNS LAN discovery**. **Not a Holochain release and not' \
             'for general use** -- it network-partitions from stock Holochain 0.7 by design.' \
             '' \
@@ -329,6 +329,17 @@ jobs:
             'base. The hello/PoK and mDNS behaviour is unchanged. The earlier' \
             '`holochain-0.7.0-mdns.*` tags and their assets are left untouched.' \
             '' \
+            'What mdns.4 changes over mdns.3: the Holochain base moves from 0.7.0 to' \
+            '0.7.1-rc.2 (DHT indexes, publish and validation-receipt fixes, source-chain' \
+            'restore, direct signals), and it carries the capability grant wire fix from' \
+            'https://github.com/holochain/holochain/pull/6042, so DNAs built against' \
+            'hdk 0.7.0 and against hdk 0.7.1 both run and chains written by 0.7.0 open.' \
+            'Without that fix stock 0.7.1-rc.2 rejects every hdk 0.7.0 zome that commits' \
+            'a grant in `init`. The kitsune2 rev, the hello/PoK module and' \
+            '`HCP2P_PROTO_VER=1002` are unchanged, so mdns.3 and mdns.4 nodes stay on' \
+            'one cohort; only direct signals, which Moss does not use, differ between' \
+            'the two Holochain bases.' \
+            '' \
             'Sources:' \
             '' \
             "- holochain: https://github.com/lightningrodlabs/holochain/tree/${GITHUB_REF_NAME} (\`${GITHUB_SHA}\`)" \
@@ -344,7 +355,7 @@ jobs:
           gh release create "$RELEASE_TAG" \
             --target "${{ github.sha }}" \
             --prerelease \
-            --title "Holochain 0.7.0 + kitsune2 hello/PoK + mDNS LAN discovery (field test, ${RELEASE_TAG#holochain-0.7.0-})" \
+            --title "Holochain 0.7.1-rc.2 + kitsune2 hello/PoK + mDNS LAN discovery (field test, ${RELEASE_TAG#holochain-0.7.1-rc.2-})" \
             --notes-file notes.md
 
       - name: Upload assets (clobber makes re-runs of this tag idempotent)
