@@ -323,40 +323,6 @@ impl core::fmt::Display for ActionType {
     }
 }
 
-/// Capability-grant access type.
-#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
-#[repr(i64)]
-pub enum CapAccessType {
-    /// No restrictions; any caller may invoke the granted function.
-    Unrestricted = 0,
-    /// Caller must present a matching secret token.
-    Transferable = 1,
-    /// Caller must be on the agent allow-list and present the secret.
-    Assigned = 2,
-}
-
-/// Maps [`CapAccessType`] onto the `CapGrant.cap_access` INTEGER column
-/// (`0..=2`). All three variants are valid, including `0`.
-impl From<CapAccessType> for i64 {
-    fn from(a: CapAccessType) -> Self {
-        a as i64
-    }
-}
-
-/// Inverse of [`From<CapAccess> for i64`]. Returns `Err(v)` for any value
-/// outside `0..=2`.
-impl TryFrom<i64> for CapAccessType {
-    type Error = i64;
-    fn try_from(v: i64) -> Result<Self, Self::Error> {
-        match v {
-            0 => Ok(CapAccessType::Unrestricted),
-            1 => Ok(CapAccessType::Transferable),
-            2 => Ok(CapAccessType::Assigned),
-            other => Err(other),
-        }
-    }
-}
-
 /// Common header fields shared by every action variant.
 #[derive(Clone, Debug, PartialEq, Eq, Hash, Serialize, Deserialize, SerializedBytes)]
 pub struct ActionHeader {
@@ -537,27 +503,9 @@ pub struct Action {
 }
 
 impl Action {
-    /// The public key of the agent who "authored" this action.
-    ///
-    /// This is not necessarily the agent who signed the action; see
-    /// [`Action::signer`].
+    /// The public key of the agent who authored and signed this action.
     pub fn author(&self) -> &AgentPubKey {
         &self.header.author
-    }
-
-    /// The public key of the agent who signed this action.
-    ///
-    /// This is not necessarily the agent who "authored" the action: a
-    /// `CloseChain` action during an agent-key migration is signed with the
-    /// new key rather than the author key, because the new key must be
-    /// known in order for the migration to be effective.
-    pub fn signer(&self) -> &AgentPubKey {
-        match &self.data {
-            ActionData::CloseChain(CloseChainData {
-                new_target: Some(crate::action::MigrationTarget::Agent(agent)),
-            }) => agent,
-            _ => self.author(),
-        }
     }
 
     /// The microsecond timestamp at which this action was authored.
@@ -757,20 +705,6 @@ mod tests {
     }
 
     #[test]
-    fn cap_access_i64_roundtrip() {
-        for v in [
-            CapAccessType::Unrestricted,
-            CapAccessType::Transferable,
-            CapAccessType::Assigned,
-        ] {
-            let n: i64 = v.into();
-            assert_eq!(CapAccessType::try_from(n).unwrap(), v);
-        }
-        assert!(CapAccessType::try_from(-1).is_err());
-        assert!(CapAccessType::try_from(3).is_err());
-    }
-
-    #[test]
     fn data_structs_construct() {
         // Sanity check that each struct has the expected shape by constructing one.
         let _ = DnaData {
@@ -944,27 +878,5 @@ mod tests {
         assert!(a.is_genesis());
         a.header.action_seq = crate::action::POST_GENESIS_SEQ_THRESHOLD;
         assert!(!a.is_genesis());
-    }
-
-    #[test]
-    fn action_signer_defaults_to_author() {
-        let a = sample_action(sample_create_data());
-        assert_eq!(a.signer(), a.author());
-    }
-
-    #[test]
-    fn action_signer_uses_the_migration_agent_for_close_chain() {
-        let new_agent = AgentPubKey::from_raw_36(vec![7u8; 36]);
-        let a = sample_action(ActionData::CloseChain(CloseChainData {
-            new_target: Some(crate::action::MigrationTarget::Agent(new_agent.clone())),
-        }));
-        assert_eq!(a.signer(), &new_agent);
-        assert_ne!(a.signer(), a.author());
-    }
-
-    #[test]
-    fn action_signer_uses_author_for_close_chain_without_agent_target() {
-        let a = sample_action(ActionData::CloseChain(CloseChainData { new_target: None }));
-        assert_eq!(a.signer(), a.author());
     }
 }

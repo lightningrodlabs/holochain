@@ -32,7 +32,7 @@ pub const MAX_TAG_SIZE: usize = 1000;
 ///
 /// Signatures are computed and checked over the `Action` bytes.
 pub async fn verify_action_signature(sig: &Signature, action: &Action) -> SysValidationResult<()> {
-    if action.signer().verify_signature(sig, action).await? {
+    if action.author().verify_signature(sig, action).await? {
         Ok(())
     } else {
         Err(SysValidationError::ValidationOutcome(
@@ -264,6 +264,21 @@ pub fn check_prev_seq(action: &Action, prev_action: &Action) -> SysValidationRes
     } else {
         Err(PrevActionErrorKind::InvalidSeq(action_seq, prev_seq))
             .map_err(|e| ValidationOutcome::PrevActionError((e, action.clone()).into()).into())
+    }
+}
+
+/// Check that the previous action is not a CloseChain
+///
+/// A CloseChain is always required to be the last action in a chain, so no
+/// action may follow it.
+pub fn check_prev_action_not_close_chain(
+    action: &Action,
+    prev_action: &Action,
+) -> SysValidationResult<()> {
+    match prev_action.data {
+        ActionData::CloseChain(_) => Err(PrevActionErrorKind::ActionAfterChainClose)
+            .map_err(|e| ValidationOutcome::PrevActionError((e, action.clone()).into()).into()),
+        _ => Ok(()),
     }
 }
 

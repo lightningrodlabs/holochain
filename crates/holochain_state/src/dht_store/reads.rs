@@ -22,10 +22,10 @@ use holochain_types::prelude::{
 };
 use holochain_types::warrant::WarrantOp;
 use holochain_zome_types::prelude::{
-    Action, ActionData, CapGrant, CapSecret, ChainFilter, ChainFork, ChainHead, ChainQueryFilter,
-    ChainStatus, EntryType, EntryVisibility, HighestObserved, LimitConditions, LinkTag,
-    LinkTypeFilter, Record, RecordEntry, RecordValidity, SignedActionHashed, SignedWarrant,
-    ValidationReceiptSet,
+    Action, ActionData, CapAccess, CapSecret, ChainFilter, ChainFork, ChainHead, ChainQueryFilter,
+    ChainStatus, EntryType, EntryVisibility, GrantConstraintType, HighestObserved, LimitConditions,
+    LinkTag, LinkTypeFilter, Record, RecordEntry, RecordValidity, SignedActionHashed,
+    SignedWarrant, ValidationReceiptSet,
 };
 use holochain_zome_types::validate::ValidationStatus;
 use std::collections::{HashMap, HashSet};
@@ -1626,6 +1626,12 @@ impl DhtStore<DbRead<Dht>> {
             }
         }
 
+        // A take of `n` needs only the `n` actions below the chain top: every
+        // valid chain lowers seq by exactly one per step.
+        if let (Some(take), None) = (filter.get_take(), resolved_until_seq) {
+            resolved_until_seq = Some(chain_top_seq.saturating_sub(take - 1));
+        }
+
         // Scan the bounded range (already ordered seq DESC, hash DESC).
         let mut activity: Vec<AgentActivity> = self
             .db()
@@ -1770,6 +1776,12 @@ impl DhtStore<DbRead<Dht>> {
                     ));
                 }
             }
+        }
+
+        // A take of `n` needs only the `n` actions below the chain top: every
+        // valid chain lowers seq by exactly one per step.
+        if let (Some(take), None) = (filter.get_take(), resolved_until_seq) {
+            resolved_until_seq = Some(chain_top_seq.saturating_sub(take - 1));
         }
 
         // Scan the store bounded range.
@@ -2294,41 +2306,47 @@ impl DhtStore<DbRead<Dht>> {
         Ok(Some(create))
     }
 
-    /// The author's candidate capability grants for the `is_valid` loop in
-    /// [`SourceChain::valid_cap_grant`](crate::source_chain::SourceChain::valid_cap_grant).
+    /// The author's candidate capability grants for the validity loops in
+    /// [`SourceChain::valid_cap_grant`](crate::source_chain::SourceChain::valid_cap_grant) and
+    /// [`valid_direct_signal_grant`](Self::valid_direct_signal_grant).
     ///
     /// - When `check_secret` is `Some`, only grants that carry a secret
     ///   (`Transferable` / `Assigned`) are considered. The exact-secret match is
-    ///   left to the caller's [`CapGrant::is_valid`], which is equivalent
-    ///   because `is_valid` requires `secret == given` for both secret-bearing
-    ///   variants (a secret-bearing check therefore never matches an
-    ///   `Unrestricted` grant).
+    ///   left to the caller's [`CapAccess::is_valid_for_zome_call`] or
+    ///   [`CapAccess::is_valid_for_direct_signal`], which is equivalent because it
+    ///   requires `secret == given` for both secret-bearing variants (a
+    ///   secret-bearing check therefore never matches an `Unrestricted` grant).
     /// - When `check_secret` is `None`, only `Unrestricted` grants are
     ///   considered.
     ///
     /// Candidates are restricted to grants authored by `author` (the `CapGrant`
     /// index join filters on `Action.author`) and dropped when their entry has
     /// been updated or deleted by the author.
+    ///
+    /// The granted [`Capability`](holochain_zome_types::prelude::Capability) is not
+    /// part of the index, so candidates of every capability kind are returned;
+    /// matching the requested capability is the caller's job.
     pub async fn valid_cap_grants(
         &self,
         author: &AgentPubKey,
         check_secret: Option<&CapSecret>,
-    ) -> StateQueryResult<Vec<CapGrant>> {
-        // `CapAccess` integer encoding (see the DHT schema): 0=Unrestricted,
-        // 1=Transferable, 2=Assigned. A secret-bearing check looks only at the
-        // grants that carry a secret; an unrestricted check only at unrestricted
-        // grants.
-        let access_types: &[i64] = if check_secret.is_some() {
-            &[1, 2]
+    ) -> StateQueryResult<Vec<CapAccess>> {
+        // A secret-bearing check looks only at the grants that carry a secret; an
+        // unrestricted check only at unrestricted grants.
+        let constraint_types: &[GrantConstraintType] = if check_secret.is_some() {
+            &[
+                GrantConstraintType::Transferable,
+                GrantConstraintType::Assigned,
+            ]
         } else {
-            &[0]
+            &[GrantConstraintType::Unrestricted]
         };
 
         let mut grants = Vec::new();
-        for &access in access_types {
+        for &constraint_type in constraint_types {
             let rows = self
                 .db()
-                .get_cap_grants_by_access(author.clone(), access)
+                .get_cap_grants_by_access(author.clone(), constraint_type.into())
                 .await?;
 
             // Resolve each grant's entry hash (from its create/update action)
@@ -2367,12 +2385,31 @@ impl DhtStore<DbRead<Dht>> {
                 let Some(entry) = entries.get(&entry_hash) else {
                     continue;
                 };
-                if let Some(grant) = entry.as_cap_grant() {
+                if let Some(grant) = entry.as_cap_access() {
                     grants.push(grant);
                 }
             }
         }
         Ok(grants)
+    }
+
+    /// The `author`'s grant authorizing `from_agent` to send them a direct signal, if any.
+    ///
+    /// Unlike a zome call, an agent has no implicit access to its own direct signals, so this
+    /// consults committed grants only: `from_agent` needs a
+    /// [`Capability::DirectSignal`](holochain_zome_types::prelude::Capability::DirectSignal)
+    /// grant whose constraint permits them, even when `from_agent == author`.
+    pub async fn valid_direct_signal_grant(
+        &self,
+        author: &AgentPubKey,
+        from_agent: &AgentPubKey,
+        check_secret: Option<&CapSecret>,
+    ) -> StateQueryResult<Option<CapAccess>> {
+        Ok(self
+            .valid_cap_grants(author, check_secret)
+            .await?
+            .into_iter()
+            .find(|grant| grant.is_valid_for_direct_signal(from_agent, check_secret)))
     }
 
     /// `true` if `entry_hash` has been updated or deleted by `author` — the
@@ -3327,6 +3364,34 @@ mod tests {
     };
     use std::sync::Arc;
     use EntryType;
+
+    #[test]
+    fn invalid_status_carries_the_rejected_actions_own_head_not_the_valid_tip() {
+        use holochain_zome_types::prelude::{ChainHead, ChainStatus};
+
+        let valid_tip_hash = ActionHash::from_raw_36(vec![3; 36]);
+        let rejected_hash = ActionHash::from_raw_36(vec![4; 36]);
+        let valid = vec![
+            (0u32, ActionHash::from_raw_36(vec![0; 36])),
+            (3, valid_tip_hash.clone()),
+        ];
+        let rejected = vec![(4u32, rejected_hash.clone())];
+
+        let (status, valid_out, rejected_out) =
+            compute_chain_status(valid.into_iter(), rejected.into_iter());
+
+        //  The chain head inside `Invalid` should be the first rejected action and not the valid
+        //  chain head.
+        assert_eq!(
+            status,
+            ChainStatus::Invalid(ChainHead {
+                action_seq: 4,
+                hash: rejected_hash,
+            })
+        );
+        assert_eq!(valid_out.last().unwrap().1, valid_tip_hash);
+        assert_eq!(rejected_out.len(), 1);
+    }
 
     fn make_fork_op(author: &AgentPubKey, prev: &ActionHash, seq: u32, seed: u8) -> DhtOpHashed {
         let action = Action {

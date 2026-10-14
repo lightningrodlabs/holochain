@@ -45,7 +45,10 @@
 //! A [`WarrantOp`] is produced as a proof that an agent broke the rules of the DHT. That may be the
 //! rules of this workflow or the rules set by the application and checked in the app validation
 //! workflow.
-//! Warrant validation is performed entirely by sys validation, and the steps performed are:
+//! Checking a [`WarrantOp`] is triggered from this workflow, but it waits on the validation status
+//! of the warranted [`Action`], which is only settled once that action has gone through the full
+//! validation pipeline, including app validation. The steps performed once that status is
+//! available are:
 //! - For a [`WarrantOpType::ChainIntegrityWarrant`]:
 //!   - The warranted [`Action`] must be found locally. If it is not found, then it will be fetched.
 //!   - The warranted [`Action`] will be completely validated, including app validation.
@@ -59,6 +62,7 @@
 //! These checks are run when storing a new action for a [`DhtOp`].
 //!
 //! - Check that the [`Action`] is either a [`ActionData::Dna`] at sequence number 0, or has a previous action with sequence number strictly greater than 0.
+//! - Checks that the previous action is never a [`ActionData::CloseChain`], since this is always required to be the last action in a chain.
 //! - Checks that the author of the current action is the same as the author of the previous action.
 //! - Checks that the timestamp of the current action is greater than the timestamp of the previous action.
 //! - Checks that the sequence number of the current action is exactly 1 more than the sequence number of the previous action.
@@ -110,7 +114,7 @@ use futures::StreamExt;
 use holo_hash::DhtOpHash;
 use holochain_cascade::Cascade;
 use holochain_cascade::CascadeImpl;
-use holochain_keystore::{AgentPubKeyExt, MetaLairClient, WarrantOpExt};
+use holochain_keystore::{MetaLairClient, WarrantOpExt};
 use holochain_p2p::DynHolochainP2pDna;
 use holochain_state::dht_store::DhtStore;
 use holochain_state::prelude::*;
@@ -1061,25 +1065,6 @@ async fn validate_chain_op(
     }
 }
 
-/// Verify `sig` against the action content already carried by `signed_action`
-/// — the same bytes it was signed over. Used by the warrant checks below, which
-/// hold their dependency actions as `SignedActionHashed` and so verify directly
-/// rather than going through [`verify_action_signature`] (which takes a bare
-/// `Action`).
-async fn verify_signed_action_signature(
-    sig: &Signature,
-    signed_action: &SignedActionHashed,
-) -> SysValidationResult<()> {
-    let action = &signed_action.hashed.content;
-    if action.signer().verify_signature(sig, action).await? {
-        Ok(())
-    } else {
-        Err(SysValidationError::ValidationOutcome(
-            ValidationOutcome::CounterfeitAction(sig.clone(), Box::new(action.clone())),
-        ))
-    }
-}
-
 async fn validate_warrant_op(
     op: &holochain_types::warrant::WarrantOp,
     validation_dependencies: SysValDeps,
@@ -1118,7 +1103,7 @@ async fn validate_warrant_op(
                     }
                     (signed_action.clone(), validation_status)
                 };
-                verify_signed_action_signature(action_sig, &action).await?;
+                verify_action_signature(action_sig, &action.hashed.content).await?;
 
                 match validation_status {
                     ValidationStatus::Valid => {
@@ -1212,8 +1197,8 @@ async fn validate_warrant_op(
                     (signed_action1.clone(), signed_action2.clone())
                 };
 
-                verify_signed_action_signature(a1_sig, &action1).await?;
-                verify_signed_action_signature(a2_sig, &action2).await?;
+                verify_action_signature(a1_sig, &action1.hashed.content).await?;
+                verify_action_signature(a2_sig, &action2.hashed.content).await?;
 
                 Ok(())
             }
@@ -1224,7 +1209,7 @@ async fn validate_warrant_op(
 /// Verify a freshly authored record's signature, checked directly against its
 /// action content, before running [`sys_validate_record`] on it.
 pub async fn counterfeit_check_authored_record(record: &Record) -> SysValidationOutcome<()> {
-    match verify_signed_action_signature(record.signature(), record.signed_action()).await {
+    match verify_action_signature(record.signature(), record.action()).await {
         Ok(()) => Ok(()),
         Err(SysValidationError::ValidationOutcome(validation_outcome)) => {
             validation_outcome.into_outcome()
@@ -1322,9 +1307,7 @@ pub async fn counterfeit_check_action(
     signature: &Signature,
     action: &Action,
 ) -> SysValidationResult<()> {
-    let hashed = holo_hash::HoloHashed::from_content_sync(action.clone());
-    let signed_action = SignedActionHashed::with_presigned(hashed, signature.clone());
-    verify_signed_action_signature(signature, &signed_action).await
+    verify_action_signature(signature, action).await
 }
 
 /// Check if the warrant op has valid signature and author.
@@ -1333,6 +1316,31 @@ pub async fn counterfeit_check_warrant(
 ) -> SysValidationResult<()> {
     verify_warrant_signature(warrant_op).await?;
     Ok(())
+}
+
+/// Check that the entry carried by a chain op hashes to the entry hash named
+/// by its action.
+///
+/// The entry is not covered by the action signature, so a third party can pair
+/// a genuine, signed action with fabricated entry bytes. Ops that fail this
+/// check must be dropped before anything is written and without warranting the
+/// action's author, who may not have produced the entry.
+///
+/// Ops without a `Present` entry pass. An op that carries an entry while its
+/// action names no entry hash is malformed and fails too.
+pub fn counterfeit_check_entry(op: &ChainOp) -> SysValidationResult<()> {
+    let Some(OpEntry::Present(entry)) = op.op_entry() else {
+        return Ok(());
+    };
+    let action = op.signed_action().data();
+    let entry_hash = action.entry_hash().ok_or_else(|| {
+        ValidationOutcome::MalformedDhtOp(
+            Box::new(action.clone()),
+            op.op_type(),
+            "op carries an entry but its action names no entry hash".to_string(),
+        )
+    })?;
+    check_entry_hash(entry_hash, entry)
 }
 
 fn register_agent_activity(
@@ -1354,13 +1362,7 @@ fn register_agent_activity(
             .and_then(|s| s.as_action())
             .ok_or_else(|| ValidationOutcome::DepMissingFromDht(prev_action_hash.clone().into()))?;
 
-        match prev_action.data {
-            ActionData::CloseChain(_) => Err(ValidationOutcome::PrevActionError(
-                (PrevActionErrorKind::ActionAfterChainClose, action.clone()).into(),
-            )
-            .into()),
-            _ => Ok(()),
-        }
+        check_prev_action_not_close_chain(action, prev_action)
     } else {
         Ok(())
     }
@@ -1378,6 +1380,7 @@ fn store_record(action: &Action, validation_dependencies: SysValDeps) -> SysVali
             .get(prev_action_hash)
             .and_then(|s| s.as_action())
             .ok_or_else(|| ValidationOutcome::DepMissingFromDht(prev_action_hash.clone().into()))?;
+        check_prev_action_not_close_chain(action, prev_action)?;
         check_prev_author(action, prev_action)?;
         check_prev_timestamp(action, prev_action)?;
         check_prev_seq(action, prev_action)?;
@@ -1567,10 +1570,15 @@ impl SysValidationWorkspace {
 /// Gets an arbitrary agent with a cell running the given DNA, needed for processes
 /// which require an agent signature but happen at the DNA level, i.e. not bound to any
 /// particular cell.
+///
+/// A restoring cell's agent is also accepted as representative for its DNA because even though it
+/// is deliberately kept out of `running_cell_ids` until the app is enabled, its DNA space still
+/// needs sys/app validation to run so that encountered warrants can reach a verdict.
 pub fn get_representative_agent(conductor: &Conductor, dna_hash: &DnaHash) -> Option<AgentPubKey> {
     conductor
         .running_cell_ids()
         .into_iter()
+        .chain(conductor.restoring_cell_ids())
         .find(|id| id.dna_hash() == dna_hash)
         .map(|id| id.agent_pubkey().clone())
 }

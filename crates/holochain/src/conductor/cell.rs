@@ -30,7 +30,7 @@ use error::CellError;
 use futures::future::FutureExt;
 use holo_hash::*;
 use holochain_cascade::authority;
-use holochain_keystore::AgentPubKeyExt;
+use holochain_keystore::SignedValidationReceiptExt;
 use holochain_nonce::fresh_nonce;
 use holochain_p2p::event::CountersigningSessionNegotiationMessage;
 use holochain_p2p::{HolochainP2pDna, HolochainP2pError, HolochainP2pResult};
@@ -432,34 +432,60 @@ impl holochain_p2p::event::HcP2pHandler for Cell {
         signature: Signature,
     ) -> BoxFut<'_, HolochainP2pResult<()>> {
         Box::pin(async move {
-            // Add 3 to allow for msgpack overhead for an "array 16"
-            if signal.len() > DIRECT_SIGNAL_MAX_SIZE + 3 {
-                let signal_length = signal.len();
+            if signal.len() > DIRECT_SIGNAL_MAX_ENCODED_SIZE {
                 warn!(
-                    "Received signal payload that is {signal_length:?} > {}",
-                    DIRECT_SIGNAL_MAX_SIZE + 3
+                    "Received direct signal of {len} bytes, limit is {limit}",
+                    len = signal.len(),
+                    limit = DIRECT_SIGNAL_MAX_ENCODED_SIZE
                 );
                 return Err(HolochainP2pError::other(
-                    "Received signal payload that was too long",
+                    "Received direct signal that was too long",
+                ));
+            }
+
+            // Verify against the hash of the exact bytes received, as for zome calls, before
+            // spending any work on decoding.
+            let valid_sig = is_valid_signature(&from_agent, &signal, &signature)
+                .await
+                .map_err(HolochainP2pError::other)?;
+            if !valid_sig {
+                warn!("Received direct signal with an invalid signature");
+                return Err(HolochainP2pError::other(
+                    "Received direct signal with an invalid signature",
                 ));
             }
 
             let signal: DirectSignal = decode(&signal).map_err(HolochainP2pError::other)?;
-
-            let valid_sig = from_agent
-                .verify_signature(&signature, &signal)
-                .await
-                .map_err(HolochainP2pError::other)?;
-            if !valid_sig {
-                warn!("Received signal payload with an invalid signature");
+            if signal.signal.len() > DIRECT_SIGNAL_MAX_SIZE {
                 return Err(HolochainP2pError::other(
-                    "Received signal with an invalid signature",
+                    "Received direct signal that was too long",
+                ));
+            }
+
+            // The secret arrives inside the signed bytes, so it is bound to the payload and to
+            // `from_agent` by the signature checked above.
+            let granted = self
+                .space
+                .dht_store
+                .as_read()
+                .valid_direct_signal_grant(&to_agent, &from_agent, signal.cap_secret.as_ref())
+                .await
+                .map_err(HolochainP2pError::other)?
+                .is_some();
+            if !granted {
+                warn!(
+                    ?from_agent,
+                    "Received direct signal with no matching capability grant"
+                );
+                return Err(HolochainP2pError::other(
+                    "Received direct signal with no matching capability grant",
                 ));
             }
 
             if let Err(e) = self.signal_tx.send(Signal::AppDirect {
                 cell_id: CellId::new(dna_hash, to_agent),
-                signal: signal.0,
+                from_agent,
+                signal: signal.signal,
             }) {
                 info!(?e, "Failed to relay direct signal to app")
             }
@@ -590,6 +616,14 @@ impl holochain_p2p::event::HcP2pHandler for Cell {
         let fut = async move {
             for receipt in receipts.into_iter() {
                 debug!(from = ?receipt.receipt.validators, to = ?self.id.agent_pubkey(), hash = ?receipt.receipt.dht_op_hash);
+                if !receipt.verify().await {
+                    warn!(
+                        validators = ?receipt.receipt.validators,
+                        hash = ?receipt.receipt.dht_op_hash,
+                        "Dropping invalid validation receipt"
+                    );
+                    continue;
+                }
 
                 // Get the action for this op so we can check the entry type.
                 let hash = receipt.receipt.dht_op_hash.clone();
