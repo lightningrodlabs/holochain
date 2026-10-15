@@ -1,6 +1,6 @@
 [package]
 name = "holo_hash"
-version = "0.7.1-rc.1"
+version = "0.7.1"
 authors = ["Holochain Core Dev Team <devcore@holochain.org>"]
 keywords = ["holochain", "holo", "hash", "blake", "blake2b"]
 categories = ["cryptography"]
@@ -26,10 +26,10 @@ derive_more = { version = "2.0", features = [
   "into",
   "from",
 ], optional = true }
-fixt = { version = "^0.7.0", path = "../fixt", optional = true }
+fixt = { version = "^0.7.1", path = "../fixt", optional = true }
 futures = { version = "0.3", optional = true }
 holochain_serialized_bytes = { version = "=0.0.57", optional = true }
-holochain_util = { version = "^0.7.0", path = "../holochain_util", default-features = false }
+holochain_util = { version = "^0.7.1", path = "../holochain_util", default-features = false }
 # FIELD-TEST-ONLY dependency redirection: see the note in the workspace Cargo.toml.
 kitsune2_api = { git = "https://github.com/lightningrodlabs/kitsune2", rev = "d8b99b09096ac495ea7152cf48f9d4a1ac3cd0a8", optional = true }
 must_future = { version = "0.1", optional = true }
