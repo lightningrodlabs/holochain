@@ -53,9 +53,9 @@ env:
   # pin the sha256 of the assets under the tag they were cut against, so a tag
   # that moved to another commit would silently invalidate that provenance.
   # Bump this whenever the source below changes, kitsune2 rev included.
-  RELEASE_TAG: holochain-0.7.1-mdns.5
+  RELEASE_TAG: holochain-0.7.1-mdns.6
   KITSUNE2_REF: moss-0.16
-  KITSUNE2_REV: d8b99b09096ac495ea7152cf48f9d4a1ac3cd0a8
+  KITSUNE2_REV: c18c46536bb19ac6416fe1db13e8122f93f39345
   CARGO_TERM_COLOR: always
 
 concurrency:
@@ -344,6 +344,15 @@ jobs:
             'the 0.7.1 release (release preparation only, no code change between the' \
             'two), still carrying the capability grant wire fix, which upstream has' \
             'not merged yet.' \
+            '' \
+            'What mdns.6 changes over mdns.5: the kitsune2 rev moves its iroh' \
+            'dependencies from the 1.1 line to iroh 1.4.1 (iroh, iroh-relay,' \
+            'iroh-base, iroh-dns) and the LAN lookup to iroh-mdns-address-lookup' \
+            '0.6.1. That is the same iroh line the Moss relay server is built on, so' \
+            'conductor and relay run one QUIC stack (noq 1.4). No kitsune2 or' \
+            'Holochain source changes; the hello/PoK module, mDNS behaviour and' \
+            '`HCP2P_PROTO_VER=1002` are unchanged, so mdns.5 and mdns.6 nodes stay on' \
+            'one cohort.' \
             '' \
             'Sources:' \
             '' \

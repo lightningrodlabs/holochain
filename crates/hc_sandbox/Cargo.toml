@@ -47,7 +47,7 @@ walkdir = "2"
 [dev-dependencies]
 tempfile = "3.20.0"
 # FIELD-TEST-ONLY dependency redirection: see the note in the workspace Cargo.toml.
-kitsune2_test_utils = { git = "https://github.com/lightningrodlabs/kitsune2", rev = "d8b99b09096ac495ea7152cf48f9d4a1ac3cd0a8" }
+kitsune2_test_utils = { git = "https://github.com/lightningrodlabs/kitsune2", rev = "c18c46536bb19ac6416fe1db13e8122f93f39345" }
 
 [target.'cfg(unix)'.dev-dependencies]
 nix = { version = "0.30", features = ["process", "signal"] }

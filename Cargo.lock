@@ -974,7 +974,7 @@ version = "3.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "faf9468729b8cbcea668e36183cb69d317348c2e08e994829fb56ebfdfbaac34"
 dependencies = [
- "windows-sys 0.61.2",
+ "windows-sys 0.59.0",
 ]
 
 [[package]]
@@ -1676,7 +1676,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c54e03a951783e8b327515db3f2a2fd0e3bed362a96b066f341ce66ed49b4ead"
 dependencies = [
  "data-encoding",
- "syn 3.0.4",
+ "syn 1.0.109",
 ]
 
 [[package]]
@@ -1884,7 +1884,7 @@ dependencies = [
  "libc",
  "option-ext",
  "redox_users",
- "windows-sys 0.61.2",
+ "windows-sys 0.59.0",
 ]
 
 [[package]]
@@ -2121,7 +2121,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "39cab71617ae0d63f51a36d69f866391735b51691dbda63cf6f96d042b63efeb"
 dependencies = [
  "libc",
- "windows-sys 0.61.2",
+ "windows-sys 0.59.0",
 ]
 
 [[package]]
@@ -2820,35 +2820,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e712f64ec3850b98572bffac52e2c6f282b29fe6c5fa6d42334b30be438d95c1"
 
 [[package]]
-name = "hickory-net"
-version = "0.26.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e2295ed2f9c31e471e1428a8f88a3f0e1f4b27c15049592138d1eebe9c35b183"
-dependencies = [
- "async-trait",
- "bytes",
- "cfg-if",
- "data-encoding",
- "futures-channel",
- "futures-io",
- "futures-util",
- "h2",
- "hickory-proto",
- "http",
- "idna",
- "ipnet",
- "jni 0.22.4",
- "rand 0.10.2",
- "rustls",
- "thiserror 2.0.20",
- "tinyvec",
- "tokio",
- "tokio-rustls",
- "tracing",
- "url",
-]
-
-[[package]]
 name = "hickory-proto"
 version = "0.26.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2859,41 +2830,11 @@ dependencies = [
  "ipnet",
  "jni 0.22.4",
  "once_cell",
- "prefix-trie",
  "rand 0.10.2",
- "ring",
  "thiserror 2.0.20",
  "tinyvec",
  "tracing",
  "url",
-]
-
-[[package]]
-name = "hickory-resolver"
-version = "0.26.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f0d58d28879ceecde6607729660c2667a081ccdc082e082675042793960f178c"
-dependencies = [
- "cfg-if",
- "futures-util",
- "hickory-net",
- "hickory-proto",
- "ipconfig",
- "ipnet",
- "jni 0.22.4",
- "moka",
- "ndk-context",
- "once_cell",
- "parking_lot",
- "rand 0.10.2",
- "resolv-conf",
- "rustls",
- "smallvec",
- "system-configuration",
- "thiserror 2.0.20",
- "tokio",
- "tokio-rustls",
- "tracing",
 ]
 
 [[package]]
@@ -3834,7 +3775,7 @@ dependencies = [
  "percent-encoding",
  "pin-project-lite",
  "socket2",
- "system-configuration",
+ "system-configuration 0.7.0",
  "tokio",
  "tower-service",
  "tracing",
@@ -4154,15 +4095,12 @@ name = "ipnet"
 version = "2.12.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "6a756c3fac73139e83f14c2d742155dd2b78d3ee56597b419a0579b7bdd6dd78"
-dependencies = [
- "serde",
-]
 
 [[package]]
 name = "iroh"
-version = "1.1.0"
+version = "1.4.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "329552fad4e46b5ccb4439d5635216f6289eec2c46f3fde4bc732d762694b9e5"
+checksum = "e3689cab508af9bcef7816c1201b403595ec6aa20e7d15e1f9683bb4be4a5b17"
 dependencies = [
  "backon",
  "blake3",
@@ -4174,7 +4112,6 @@ dependencies = [
  "ed25519-dalek 3.0.0",
  "futures-util",
  "getrandom 0.4.3",
- "hickory-resolver",
  "http",
  "ipnet",
  "iroh-base",
@@ -4211,9 +4148,9 @@ dependencies = [
 
 [[package]]
 name = "iroh-base"
-version = "1.1.0"
+version = "1.4.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3ccf4cde68a02ef03c0095ab2c031c6adfe508f3bc8e7c258558a027ebe64a8e"
+checksum = "43b72366b16001af3a51574233df88ca6d62da0215807549a769e7de887da803"
 dependencies = [
  "curve25519-dalek 5.0.0",
  "data-encoding",
@@ -4230,18 +4167,17 @@ dependencies = [
 
 [[package]]
 name = "iroh-dns"
-version = "1.1.0"
+version = "1.4.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9a41224eb0140a5c519935d4073fc6b236d174080be401f9bf7da126b2ee3aa4"
+checksum = "7481d0792dde1035a2b06ec06ed3cf6d01fcb1a494e6931b489e32073382048d"
 dependencies = [
  "arc-swap",
  "cfg_aliases",
  "derive_more",
- "hickory-resolver",
  "iroh-base",
+ "n0-dns-resolver",
  "n0-error",
  "n0-future",
- "ndk-context",
  "portable-atomic",
  "rand 0.10.2",
  "rustls",
@@ -4254,9 +4190,9 @@ dependencies = [
 
 [[package]]
 name = "iroh-mdns-address-lookup"
-version = "0.5.0"
+version = "0.6.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "cad3dfcaddd5c3681bf0a42606498fc6e8891de793408dfbc46a9fbe76f370b3"
+checksum = "c7e00b132891c9cfad726fb437b62315e722949d409717b6c7dcb535e9f24112"
 dependencies = [
  "data-encoding",
  "derive_more",
@@ -4274,9 +4210,9 @@ dependencies = [
 
 [[package]]
 name = "iroh-metrics"
-version = "1.0.1"
+version = "1.0.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "291065721ad7c477b972e581bbc528df031dc8eb5e39fe1ff3300ae5dfb157ef"
+checksum = "8ede55536349842337f7cdc63012ec33dc637945f3259c98a0763aac364cdf09"
 dependencies = [
  "http-body-util",
  "hyper",
@@ -4309,9 +4245,9 @@ dependencies = [
 
 [[package]]
 name = "iroh-relay"
-version = "1.1.0"
+version = "1.4.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1b5f6f07e2c9b0c4bc82e2864be09f4aea4320165d5316e668616dbc822f428a"
+checksum = "7e5589e7c1475700686603a970275687f760df853bc6525c7eb1347aa31d7230"
 dependencies = [
  "blake3",
  "bytes",
@@ -4321,7 +4257,6 @@ dependencies = [
  "data-encoding",
  "derive_more",
  "getrandom 0.4.3",
- "hickory-resolver",
  "http",
  "http-body-util",
  "hyper",
@@ -4335,6 +4270,7 @@ dependencies = [
  "noq",
  "noq-proto",
  "num_enum",
+ "percent-encoding",
  "pin-project",
  "postcard",
  "rand 0.10.2",
@@ -4593,7 +4529,7 @@ dependencies = [
 [[package]]
 name = "kitsune2"
 version = "0.6.0-dev.2"
-source = "git+https://github.com/lightningrodlabs/kitsune2?rev=d8b99b09096ac495ea7152cf48f9d4a1ac3cd0a8#d8b99b09096ac495ea7152cf48f9d4a1ac3cd0a8"
+source = "git+https://github.com/lightningrodlabs/kitsune2?rev=c18c46536bb19ac6416fe1db13e8122f93f39345#c18c46536bb19ac6416fe1db13e8122f93f39345"
 dependencies = [
  "bytes",
  "kitsune2_api",
@@ -4606,7 +4542,7 @@ dependencies = [
 [[package]]
 name = "kitsune2_api"
 version = "0.6.0-dev.2"
-source = "git+https://github.com/lightningrodlabs/kitsune2?rev=d8b99b09096ac495ea7152cf48f9d4a1ac3cd0a8#d8b99b09096ac495ea7152cf48f9d4a1ac3cd0a8"
+source = "git+https://github.com/lightningrodlabs/kitsune2?rev=c18c46536bb19ac6416fe1db13e8122f93f39345#c18c46536bb19ac6416fe1db13e8122f93f39345"
 dependencies = [
  "base64 0.23.1",
  "bytes",
@@ -4622,7 +4558,7 @@ dependencies = [
 [[package]]
 name = "kitsune2_bootstrap_client"
 version = "0.6.0-dev.2"
-source = "git+https://github.com/lightningrodlabs/kitsune2?rev=d8b99b09096ac495ea7152cf48f9d4a1ac3cd0a8#d8b99b09096ac495ea7152cf48f9d4a1ac3cd0a8"
+source = "git+https://github.com/lightningrodlabs/kitsune2?rev=c18c46536bb19ac6416fe1db13e8122f93f39345#c18c46536bb19ac6416fe1db13e8122f93f39345"
 dependencies = [
  "base64 0.23.1",
  "kitsune2_api",
@@ -4636,7 +4572,7 @@ dependencies = [
 [[package]]
 name = "kitsune2_bootstrap_mdns"
 version = "0.6.0-dev.2"
-source = "git+https://github.com/lightningrodlabs/kitsune2?rev=d8b99b09096ac495ea7152cf48f9d4a1ac3cd0a8#d8b99b09096ac495ea7152cf48f9d4a1ac3cd0a8"
+source = "git+https://github.com/lightningrodlabs/kitsune2?rev=c18c46536bb19ac6416fe1db13e8122f93f39345#c18c46536bb19ac6416fe1db13e8122f93f39345"
 dependencies = [
  "base64 0.23.1",
  "bytes",
@@ -4652,7 +4588,7 @@ dependencies = [
 [[package]]
 name = "kitsune2_bootstrap_srv"
 version = "0.6.0-dev.2"
-source = "git+https://github.com/lightningrodlabs/kitsune2?rev=d8b99b09096ac495ea7152cf48f9d4a1ac3cd0a8#d8b99b09096ac495ea7152cf48f9d4a1ac3cd0a8"
+source = "git+https://github.com/lightningrodlabs/kitsune2?rev=c18c46536bb19ac6416fe1db13e8122f93f39345#c18c46536bb19ac6416fe1db13e8122f93f39345"
 dependencies = [
  "async-channel",
  "axum",
@@ -4688,7 +4624,7 @@ dependencies = [
 [[package]]
 name = "kitsune2_core"
 version = "0.6.0-dev.2"
-source = "git+https://github.com/lightningrodlabs/kitsune2?rev=d8b99b09096ac495ea7152cf48f9d4a1ac3cd0a8#d8b99b09096ac495ea7152cf48f9d4a1ac3cd0a8"
+source = "git+https://github.com/lightningrodlabs/kitsune2?rev=c18c46536bb19ac6416fe1db13e8122f93f39345#c18c46536bb19ac6416fe1db13e8122f93f39345"
 dependencies = [
  "base64 0.23.1",
  "bytes",
@@ -4712,7 +4648,7 @@ dependencies = [
 [[package]]
 name = "kitsune2_dht"
 version = "0.6.0-dev.2"
-source = "git+https://github.com/lightningrodlabs/kitsune2?rev=d8b99b09096ac495ea7152cf48f9d4a1ac3cd0a8#d8b99b09096ac495ea7152cf48f9d4a1ac3cd0a8"
+source = "git+https://github.com/lightningrodlabs/kitsune2?rev=c18c46536bb19ac6416fe1db13e8122f93f39345#c18c46536bb19ac6416fe1db13e8122f93f39345"
 dependencies = [
  "bytes",
  "kitsune2_api",
@@ -4722,7 +4658,7 @@ dependencies = [
 [[package]]
 name = "kitsune2_gossip"
 version = "0.6.0-dev.2"
-source = "git+https://github.com/lightningrodlabs/kitsune2?rev=d8b99b09096ac495ea7152cf48f9d4a1ac3cd0a8#d8b99b09096ac495ea7152cf48f9d4a1ac3cd0a8"
+source = "git+https://github.com/lightningrodlabs/kitsune2?rev=c18c46536bb19ac6416fe1db13e8122f93f39345#c18c46536bb19ac6416fe1db13e8122f93f39345"
 dependencies = [
  "bytes",
  "futures",
@@ -4742,7 +4678,7 @@ dependencies = [
 [[package]]
 name = "kitsune2_test_utils"
 version = "0.6.0-dev.2"
-source = "git+https://github.com/lightningrodlabs/kitsune2?rev=d8b99b09096ac495ea7152cf48f9d4a1ac3cd0a8#d8b99b09096ac495ea7152cf48f9d4a1ac3cd0a8"
+source = "git+https://github.com/lightningrodlabs/kitsune2?rev=c18c46536bb19ac6416fe1db13e8122f93f39345#c18c46536bb19ac6416fe1db13e8122f93f39345"
 dependencies = [
  "axum",
  "bytes",
@@ -4758,7 +4694,7 @@ dependencies = [
 [[package]]
 name = "kitsune2_transport_iroh"
 version = "0.6.0-dev.2"
-source = "git+https://github.com/lightningrodlabs/kitsune2?rev=d8b99b09096ac495ea7152cf48f9d4a1ac3cd0a8#d8b99b09096ac495ea7152cf48f9d4a1ac3cd0a8"
+source = "git+https://github.com/lightningrodlabs/kitsune2?rev=c18c46536bb19ac6416fe1db13e8122f93f39345#c18c46536bb19ac6416fe1db13e8122f93f39345"
 dependencies = [
  "base64 0.23.1",
  "bytes",
@@ -5328,6 +5264,31 @@ dependencies = [
 ]
 
 [[package]]
+name = "n0-dns-resolver"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "535c99c9a786bee714155d2ee4fc2477405c2c43536e1bc6a51de09a0d1448f7"
+dependencies = [
+ "derive_more",
+ "ipconfig",
+ "jni 0.22.4",
+ "lru 0.18.3",
+ "n0-error",
+ "n0-future",
+ "ndk-context",
+ "rand 0.10.2",
+ "reqwest 0.13.4",
+ "rustc-hash",
+ "rustls",
+ "simple-dns",
+ "system-configuration 0.8.0",
+ "tokio",
+ "tokio-rustls",
+ "tracing",
+ "webpki-roots",
+]
+
+[[package]]
 name = "n0-error"
 version = "1.0.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -5617,9 +5578,9 @@ dependencies = [
 
 [[package]]
 name = "noq"
-version = "1.2.0"
+version = "1.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f1e6c57353d26be91a242f0ec96073066c4481a03f6be874daafb18902394515"
+checksum = "6249a065adc1edbc1704a95436f38dd60476064dbc3b7c47cf279e02d1590eb5"
 dependencies = [
  "bytes",
  "cfg_aliases",
@@ -5639,9 +5600,9 @@ dependencies = [
 
 [[package]]
 name = "noq-proto"
-version = "1.2.0"
+version = "1.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9a46813e306c29c4f86357b6ffa39a8e1c97bb274b9a296a19a56d62e4111225"
+checksum = "c01a35be3ed37558c8db69554419f24eff8a63599b54f711bbe3863ec727c47d"
 dependencies = [
  "aes-gcm",
  "aws-lc-rs",
@@ -5668,9 +5629,9 @@ dependencies = [
 
 [[package]]
 name = "noq-udp"
-version = "1.2.0"
+version = "1.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b56d621ed2c1773b5356ab39cc68c819f8d0103f7493d8661c4a5f5f8ea55f40"
+checksum = "8d0160422832eea1cc11c34be04ee6d5a046452b0b46cfb14695d55a1f24c954"
 dependencies = [
  "cfg_aliases",
  "libc",
@@ -5700,7 +5661,7 @@ version = "0.50.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7957b9740744892f114936ab4a57b3f487491bbeafaf8083688b16841a4240e5"
 dependencies = [
- "windows-sys 0.61.2",
+ "windows-sys 0.59.0",
 ]
 
 [[package]]
@@ -6526,17 +6487,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "prefix-trie"
-version = "0.8.4"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4cf6e3177f0684016a5c209b00882e15f8bdd3f3bb48f0491df10cd102d0c6e7"
-dependencies = [
- "either",
- "ipnet",
- "num-traits",
-]
-
-[[package]]
 name = "pretty_assertions"
 version = "1.4.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -6667,7 +6617,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b570b25f7617e43d59005d0990ccb79e950a423952cea19671b7a876da390adf"
 dependencies = [
  "anyhow",
- "itertools 0.14.0",
+ "itertools 0.10.5",
  "proc-macro2",
  "quote",
  "syn 2.0.119",
@@ -6761,7 +6711,7 @@ dependencies = [
  "once_cell",
  "socket2",
  "tracing",
- "windows-sys 0.61.2",
+ "windows-sys 0.59.0",
 ]
 
 [[package]]
@@ -7186,12 +7136,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "resolv-conf"
-version = "0.7.6"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1e061d1b48cb8d38042de4ae0a7a6401009d6143dc80d2e2d6f31f0bdd6470c7"
-
-[[package]]
 name = "rgb"
 version = "0.8.53"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -7369,14 +7313,14 @@ dependencies = [
  "errno",
  "libc",
  "linux-raw-sys 0.12.1",
- "windows-sys 0.61.2",
+ "windows-sys 0.59.0",
 ]
 
 [[package]]
 name = "rustls"
-version = "0.23.43"
+version = "0.23.46"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0283386ce02abc0151e1761d08802dfe86c173b0b494af5cbc086574e453da06"
+checksum = "48e13bd8c0e9365c43cfa5c9e8f9ad49d3c8444926c9aac819e0e4dc503c8fdf"
 dependencies = [
  "aws-lc-rs",
  "log",
@@ -7471,7 +7415,7 @@ dependencies = [
  "security-framework",
  "security-framework-sys",
  "webpki-root-certs",
- "windows-sys 0.61.2",
+ "windows-sys 0.59.0",
 ]
 
 [[package]]
@@ -8509,6 +8453,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "system-configuration"
+version = "0.8.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "501336eb7ba9e417300a6a0fa985721065467aa83a6dcf0422a8e43e4c0328fa"
+dependencies = [
+ "bitflags 2.13.1",
+ "core-foundation 0.10.1",
+ "system-configuration-sys",
+]
+
+[[package]]
 name = "system-configuration-sys"
 version = "0.6.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -8569,7 +8524,7 @@ dependencies = [
  "getrandom 0.4.3",
  "once_cell",
  "rustix 1.1.4",
- "windows-sys 0.61.2",
+ "windows-sys 0.59.0",
 ]
 
 [[package]]
@@ -8588,7 +8543,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "230a1b821ccbd75b185820a1f1ff7b14d21da1e442e22c0863ea5f08771a8874"
 dependencies = [
  "rustix 1.1.4",
- "windows-sys 0.61.2",
+ "windows-sys 0.59.0",
 ]
 
 [[package]]
@@ -9939,7 +9894,7 @@ version = "0.1.11"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c2a7b1c03c876122aa43f3020e6c3c3ee5c05081c9a00739faf7503aeba10d22"
 dependencies = [
- "windows-sys 0.61.2",
+ "windows-sys 0.59.0",
 ]
 
 [[package]]
