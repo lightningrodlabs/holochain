@@ -53,7 +53,7 @@ env:
   # pin the sha256 of the assets under the tag they were cut against, so a tag
   # that moved to another commit would silently invalidate that provenance.
   # Bump this whenever the source below changes, kitsune2 rev included.
-  RELEASE_TAG: holochain-0.7.1-mdns.6
+  RELEASE_TAG: holochain-0.7.1-mdns.7
   KITSUNE2_REF: moss-0.16
   KITSUNE2_REV: c18c46536bb19ac6416fe1db13e8122f93f39345
   CARGO_TERM_COLOR: always
@@ -352,6 +352,17 @@ jobs:
             'conductor and relay run one QUIC stack (noq 1.4). No kitsune2 or' \
             'Holochain source changes; the hello/PoK module, mDNS behaviour and' \
             '`HCP2P_PROTO_VER=1002` are unchanged, so mdns.5 and mdns.6 nodes stay on' \
+            'one cohort.' \
+            '' \
+            'What mdns.7 fixes over mdns.6: a Holochain 0.7 performance regression where' \
+            'every zome call, reads included, loaded and deserialized the agent'"'"'s whole' \
+            'source chain to check whether zome init had run, adding time proportional' \
+            'to chain length to each call (tens of milliseconds per call once a chain' \
+            'reaches a few thousand actions). The init check is now cached per cell and' \
+            'source chain queries, including the `query` host function, apply their' \
+            'action-type and sequence-range filters in SQL. No wire or network change;' \
+            'the kitsune2 rev, the hello/PoK module, mDNS behaviour and' \
+            '`HCP2P_PROTO_VER=1002` are unchanged, so mdns.6 and mdns.7 nodes stay on' \
             'one cohort.' \
             '' \
             'Sources:' \
