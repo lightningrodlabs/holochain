@@ -7,6 +7,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## Unreleased
 
+- Fixed a performance regression introduced in 0.7.0 where every zome call read and deserialized the agent's whole source chain to check whether zome init had run, adding time proportional to chain length to each call. The init result is now cached per cell, and source chain queries (including the `query` host function) apply action-type and sequence-range filters in SQL instead of loading the whole chain.
 - Fix publishing agent info for one space overwriting the connection preflight's infos for all other spaces. \#5962
 
 ## 0.8.0-dev.13
