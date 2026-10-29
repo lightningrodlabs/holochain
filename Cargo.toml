@@ -96,7 +96,7 @@ lto = true
 # dependency with no version field, rev-pinned for reproducibility:
 #
 #   { git = "https://github.com/lightningrodlabs/kitsune2",
-#     rev = "c18c46536bb19ac6416fe1db13e8122f93f39345" }
+#     rev = "1703ac68aebaf14b173a86dbed4cbaca0d33b736" }
 #
 # Grep for "FIELD-TEST-ONLY dependency redirection" to find them all.
 #

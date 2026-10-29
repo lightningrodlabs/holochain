@@ -53,9 +53,9 @@ env:
   # pin the sha256 of the assets under the tag they were cut against, so a tag
   # that moved to another commit would silently invalidate that provenance.
   # Bump this whenever the source below changes, kitsune2 rev included.
-  RELEASE_TAG: holochain-0.7.1-mdns.7
+  RELEASE_TAG: holochain-0.7.1-mdns.8
   KITSUNE2_REF: moss-0.16
-  KITSUNE2_REV: c18c46536bb19ac6416fe1db13e8122f93f39345
+  KITSUNE2_REV: 1703ac68aebaf14b173a86dbed4cbaca0d33b736
   CARGO_TERM_COLOR: always
 
 concurrency:
@@ -363,6 +363,17 @@ jobs:
             'action-type and sequence-range filters in SQL. No wire or network change;' \
             'the kitsune2 rev, the hello/PoK module, mDNS behaviour and' \
             '`HCP2P_PROTO_VER=1002` are unchanged, so mdns.6 and mdns.7 nodes stay on' \
+            'one cohort.' \
+            '' \
+            'What mdns.8 fixes over mdns.7: the kitsune2 rev picks up upstream' \
+            'holochain/kitsune2@d07dbe3 (issue 658). Sends to one peer queue on a' \
+            'per-peer lock; when the first dial failed and marked the peer' \
+            'unresponsive, every queued send still ran its own full connect timeout,' \
+            'so one unreachable peer cost one timeout per space. A queued send or dial' \
+            'now sees the mark once it holds the lock and fails fast instead of' \
+            'dialing again; a mark older than the attempt is ignored so a recovered' \
+            'peer is dialed. No wire change; the hello/PoK module, mDNS behaviour and' \
+            '`HCP2P_PROTO_VER=1002` are unchanged, so mdns.7 and mdns.8 nodes stay on' \
             'one cohort.' \
             '' \
             'Sources:' \
