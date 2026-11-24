@@ -703,13 +703,33 @@ fn split(
     ))
 }
 
+/// Accept a TCP connection from `listener`, with Nagle's algorithm disabled.
+///
+/// Every websocket message is a small write. With Nagle on, a write waits for
+/// the acknowledgment of the previous one, and a peer whose socket carries
+/// traffic both ways delays that acknowledgment by about 40 ms. Messages then
+/// arrive either at once or 40 ms late.
+async fn accept_tcp(listener: &dyn TcpListener) -> Result<(tokio::net::TcpStream, SocketAddr)> {
+    let (stream, addr) = listener.accept().await?;
+    stream.set_nodelay(true)?;
+    Ok((stream, addr))
+}
+
+/// Open a TCP connection to `addr`, with Nagle's algorithm disabled (see
+/// [`accept_tcp`]).
+async fn connect_tcp(addr: SocketAddr) -> Result<tokio::net::TcpStream> {
+    let stream = tokio::net::TcpStream::connect(addr).await?;
+    stream.set_nodelay(true)?;
+    Ok(stream)
+}
+
 /// Establish a new outgoing websocket connection to remote.
 pub async fn connect(
     config: Arc<WebsocketConfig>,
     request: impl Into<ConnectRequest>,
 ) -> WebsocketResult<(WebsocketSender, WebsocketReceiver)> {
     let request = request.into();
-    let stream = tokio::net::TcpStream::connect(request.addr).await?;
+    let stream = connect_tcp(request.addr).await?;
     let peer_addr = stream.peer_addr()?;
     let (stream, _addr) = tokio_tungstenite::client_async_with_config(
         request.into_client_request()?,
@@ -980,7 +1000,7 @@ impl WebsocketListener {
 
     /// Accept an incoming connection.
     pub async fn accept(&self) -> WebsocketResult<(WebsocketSender, WebsocketReceiver)> {
-        let (stream, addr) = self.listener.accept().await?;
+        let (stream, addr) = accept_tcp(self.listener.as_ref()).await?;
         tracing::debug!(?addr, "Accept Incoming Websocket Connection");
         let stream = tokio_tungstenite::accept_hdr_async_with_config(
             stream,

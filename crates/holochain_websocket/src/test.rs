@@ -406,3 +406,38 @@ async fn handle_client_close() {
         .expect("Error joining the signal sender task")
         .expect("Other error than WebsocketClosed while sending signals");
 }
+
+/// Nagle's algorithm holds a small write back until the previous one is
+/// acknowledged, and a peer whose socket carries traffic both ways delays
+/// that acknowledgment by about 40 ms. Every message on an app or admin
+/// websocket is a small write, so with Nagle on, messages arrive either at
+/// once or 40 ms late (measured from Presence, 2026-11-24: two conductors,
+/// one 640-byte direct signal every 60 ms in each direction, p95 transit
+/// 42.9 ms against a 1.9 ms median).
+#[tokio::test(flavor = "multi_thread")]
+async fn accepted_connections_have_nagle_disabled() {
+    let listener = tokio::net::TcpListener::bind((Ipv4Addr::LOCALHOST, 0))
+        .await
+        .unwrap();
+    let addr = listener.local_addr().unwrap();
+    let client = tokio::spawn(tokio::net::TcpStream::connect(addr));
+
+    let (stream, _addr) = accept_tcp(&listener).await.unwrap();
+
+    assert!(stream.nodelay().unwrap());
+    client.await.unwrap().unwrap();
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn outgoing_connections_have_nagle_disabled() {
+    let listener = tokio::net::TcpListener::bind((Ipv4Addr::LOCALHOST, 0))
+        .await
+        .unwrap();
+    let addr = listener.local_addr().unwrap();
+    let server = tokio::spawn(async move { listener.accept().await });
+
+    let stream = connect_tcp(addr).await.unwrap();
+
+    assert!(stream.nodelay().unwrap());
+    server.await.unwrap().unwrap();
+}
