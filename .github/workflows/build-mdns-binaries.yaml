@@ -53,7 +53,7 @@ env:
   # pin the sha256 of the assets under the tag they were cut against, so a tag
   # that moved to another commit would silently invalidate that provenance.
   # Bump this whenever the source below changes, kitsune2 rev included.
-  RELEASE_TAG: holochain-0.7.1-mdns.8
+  RELEASE_TAG: holochain-0.7.1-mdns.9
   KITSUNE2_REF: moss-0.16
   KITSUNE2_REV: 1703ac68aebaf14b173a86dbed4cbaca0d33b736
   CARGO_TERM_COLOR: always
@@ -375,6 +375,19 @@ jobs:
             'peer is dialed. No wire change; the hello/PoK module, mDNS behaviour and' \
             '`HCP2P_PROTO_VER=1002` are unchanged, so mdns.7 and mdns.8 nodes stay on' \
             'one cohort.' \
+            '' \
+            'What mdns.9 changes over mdns.8: the Holochain base takes the fixes' \
+            'upstream develop-0.7 holds for 0.7.2 (cap grants read from private' \
+            'entries, revoking a cap grant no longer invalidating identical later' \
+            'grants such as a restored direct signal grant, genesis before a clone' \
+            'cell joins the conductor state, clone cell init_properties, per-DNA data' \
+            'removed on uninstall, preflight carrying agents for all spaces, warrant' \
+            'filtering). The conductor'"'"'s websockets also set TCP_NODELAY: with' \
+            'Nagle on, a small app websocket write on a socket carrying traffic both' \
+            'ways waited about 40 ms for a delayed acknowledgment, which made' \
+            'high-rate direct signals (Presence voice) arrive late and uneven. The' \
+            'kitsune2 rev is unchanged. No wire change; `HCP2P_PROTO_VER=1002` is' \
+            'unchanged, so mdns.8 and mdns.9 nodes stay on one cohort.' \
             '' \
             'Sources:' \
             '' \
