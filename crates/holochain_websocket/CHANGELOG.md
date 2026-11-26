@@ -7,6 +7,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## \[Unreleased\]
 
+- Disable Nagle's algorithm (`TCP_NODELAY`) on accepted and outgoing websocket connections. Every message is a small write, and with Nagle on a peer that also sends on the socket delayed each one by up to about 40 ms (delayed acknowledgment). Measured with two conductors exchanging one 640-byte direct signal every 60 ms in each direction: p95 transit 42.9 ms before, against a 1.9 ms median.
+
 ## 0.7.1
 
 ## 0.7.1-rc.2
