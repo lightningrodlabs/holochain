@@ -34,7 +34,7 @@ holochain_timestamp = { version = "^0.7.1", path = "../timestamp" }
 # FIELD-TEST-ONLY dependency redirection: see the note in the workspace Cargo.toml.
 kitsune2_api = { git = "https://github.com/lightningrodlabs/kitsune2", rev = "1703ac68aebaf14b173a86dbed4cbaca0d33b736" }
 itertools = { version = "0.14" }
-mr_bundle = { path = "../mr_bundle", features = ["fs"], version = "^0.7.1"}
+mr_bundle = { path = "../mr_bundle", features = ["fs"], version = "^0.7.1" }
 must_future = "0.1.1"
 nanoid = "0.4"
 parking_lot = "0.12"

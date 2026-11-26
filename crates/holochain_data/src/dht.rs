@@ -42,8 +42,11 @@ mod tests {
     use holochain_integrity_types::action::{
         Action, ActionData, ActionHeader, DnaData, InitZomesCompleteData, RecordValidity,
     };
-    use holochain_integrity_types::capability::GrantConstraintType;
+    use holochain_integrity_types::capability::{
+        CapGrant, GrantConstraint, GrantConstraintType, GrantedFunctions,
+    };
     use holochain_integrity_types::entry::Entry;
+    use holochain_integrity_types::entry_def::EntryVisibility;
     use holochain_integrity_types::record::SignedHashed;
     use holochain_integrity_types::signature::Signature;
     use holochain_timestamp::Timestamp;
@@ -308,6 +311,36 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn entry_lookup_reports_storage_visibility() {
+        let db = test_open_db(dht_db_id()).await.unwrap();
+        let (public_hash, public_entry) = sample_entry(12);
+        let (private_hash, private_entry) = sample_entry(13);
+        let author = AgentPubKey::from_raw_36(vec![3u8; 36]);
+        db.insert_entry(&public_hash, &public_entry).await.unwrap();
+        db.insert_entry(&private_hash, &private_entry)
+            .await
+            .unwrap();
+        db.insert_private_entry(&private_hash, &author, &private_entry)
+            .await
+            .unwrap();
+
+        assert_eq!(
+            db.as_ref()
+                .get_entry_with_visibility(public_hash, Some(&author))
+                .await
+                .unwrap(),
+            Some((public_entry, EntryVisibility::Public))
+        );
+        assert_eq!(
+            db.as_ref()
+                .get_entry_with_visibility(private_hash, Some(&author))
+                .await
+                .unwrap(),
+            Some((private_entry, EntryVisibility::Private))
+        );
+    }
+
+    #[tokio::test]
     async fn private_entry_isolated_from_entry() {
         let db = test_open_db(dht_db_id()).await.unwrap();
         let (hash, entry) = sample_entry(13);
@@ -563,6 +596,81 @@ mod tests {
             .unwrap_err()
             .to_string();
         assert!(err.to_lowercase().contains("foreign key"), "got: {err}");
+    }
+
+    /// An unrestricted grant plus its entry hash, for the private-entry reads.
+    fn sample_cap_grant() -> (EntryHash, CapGrant) {
+        let grant = CapGrant::new_zome_call_grant(
+            "sample-tag".into(),
+            GrantConstraint::Unrestricted,
+            GrantedFunctions::All,
+        );
+        let hash = EntryHash::with_data_sync(&Entry::CapGrant(grant.clone()));
+        (hash, grant)
+    }
+
+    #[tokio::test]
+    async fn cap_grant_entry_read_from_author_private_entry() {
+        let db = test_open_db(dht_db_id()).await.unwrap();
+        let author = AgentPubKey::from_raw_36(vec![1u8; 36]);
+        let (hash, grant) = sample_cap_grant();
+        db.insert_private_entry(&hash, &author, &Entry::CapGrant(grant.clone()))
+            .await
+            .unwrap();
+
+        // DbRead handle.
+        let found = db
+            .as_ref()
+            .get_cap_grant_entry(&hash, &author)
+            .await
+            .unwrap();
+        assert_eq!(found, Some(grant.clone()));
+
+        // TxRead handle.
+        let mut tx = db.as_ref().begin().await.unwrap();
+        let found_tx = tx.get_cap_grant_entry(&hash, &author).await.unwrap();
+        assert_eq!(found_tx, Some(grant));
+    }
+
+    /// Regression for #5995: a grant that exists only in the public `Entry`
+    /// table, or only as another agent's private entry, must not resolve.
+    #[tokio::test]
+    async fn cap_grant_entry_ignores_public_and_foreign_copies() {
+        let db = test_open_db(dht_db_id()).await.unwrap();
+        let author = AgentPubKey::from_raw_36(vec![1u8; 36]);
+        let other = AgentPubKey::from_raw_36(vec![2u8; 36]);
+        let (hash, grant) = sample_cap_grant();
+        let entry = Entry::CapGrant(grant);
+
+        // Same hash in the public table and in another author's private table.
+        db.insert_entry(&hash, &entry).await.unwrap();
+        db.insert_private_entry(&hash, &other, &entry)
+            .await
+            .unwrap();
+
+        let found = db
+            .as_ref()
+            .get_cap_grant_entry(&hash, &author)
+            .await
+            .unwrap();
+        assert_eq!(found, None);
+    }
+
+    #[tokio::test]
+    async fn cap_grant_entry_rejects_non_grant_private_entry() {
+        let db = test_open_db(dht_db_id()).await.unwrap();
+        let author = AgentPubKey::from_raw_36(vec![1u8; 36]);
+        let (hash, app_entry) = sample_entry(3);
+        db.insert_private_entry(&hash, &author, &app_entry)
+            .await
+            .unwrap();
+
+        let err = db
+            .as_ref()
+            .get_cap_grant_entry(&hash, &author)
+            .await
+            .unwrap_err();
+        assert!(matches!(err, sqlx::Error::Decode(_)), "got: {err:?}");
     }
 
     #[tokio::test]
@@ -929,51 +1037,84 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn warrant_roundtrip() {
+    async fn warrant_reads_only_return_valid_integrated_warrants() {
         let db = test_open_db(dht_db_id()).await.unwrap();
-        let hash = DhtOpHash::from_raw_36(vec![0xAB; 36]);
         let author = AgentPubKey::from_raw_36(vec![3u8; 36]);
         let warrantee = AgentPubKey::from_raw_36(vec![4u8; 36]);
+        let other_warrantee = AgentPubKey::from_raw_36(vec![5u8; 36]);
+        let older = DhtOpHash::from_raw_36(vec![0xA1; 36]);
+        let rejected = DhtOpHash::from_raw_36(vec![0xA2; 36]);
+        let newer = DhtOpHash::from_raw_36(vec![0xA3; 36]);
+        let other = DhtOpHash::from_raw_36(vec![0xA4; 36]);
 
-        db.insert_warrant(InsertWarrant {
-            hash: &hash,
-            author: &author,
-            timestamp: Timestamp::from_micros(1),
-            warrantee: &warrantee,
-            proof: &[9u8; 32],
-            signature: &[8u8; 64],
-            reason: Some("rejected by app validation"),
-            storage_center_loc: 88,
-            when_received: Timestamp::from_micros(40),
-            when_integrated: Timestamp::from_micros(50),
-            validation_status: 1,
-            serialized_size: 128,
-        })
-        .await
-        .unwrap();
-
-        let row = db
-            .as_ref()
-            .get_warrant(hash.clone())
+        for (hash, target, status, timestamp) in [
+            (&older, &warrantee, 1, 1),
+            (&rejected, &warrantee, 2, 4),
+            (&newer, &warrantee, 1, 3),
+            (&other, &other_warrantee, 1, 2),
+        ] {
+            db.insert_warrant(InsertWarrant {
+                hash,
+                author: &author,
+                timestamp: Timestamp::from_micros(timestamp),
+                warrantee: target,
+                proof: &[9u8; 32],
+                signature: &[8u8; 64],
+                reason: None,
+                storage_center_loc: 0,
+                when_received: Timestamp::from_micros(40),
+                when_integrated: Timestamp::from_micros(50),
+                validation_status: status,
+                serialized_size: 128,
+            })
             .await
-            .unwrap()
-            .expect("missing");
-        assert_eq!(row.warrantee, warrantee.get_raw_36().to_vec());
-        assert_eq!(row.when_received, 40);
-        assert_eq!(row.when_integrated, 50);
-        assert_eq!(row.serialized_size, 128);
-        assert_eq!(row.reason.as_deref(), Some("rejected by app validation"));
+            .unwrap();
+
+            let row = db.as_ref().get_warrant(hash.clone()).await.unwrap();
+            assert_eq!(
+                row.map(|row| row.hash),
+                (status == 1).then(|| hash.get_raw_36().to_vec())
+            );
+        }
+
+        for (index, status) in [None, Some(1), Some(2)].into_iter().enumerate() {
+            let hash = DhtOpHash::from_raw_36(vec![0xB0 + index as u8; 36]);
+            db.insert_limbo_warrant(InsertLimboWarrant {
+                hash: &hash,
+                author: &author,
+                timestamp: Timestamp::from_micros(5),
+                warrantee: &warrantee,
+                proof: &[9u8; 32],
+                signature: &[8u8; 64],
+                reason: None,
+                storage_center_loc: 0,
+                when_received: Timestamp::from_micros(40),
+                serialized_size: 128,
+            })
+            .await
+            .unwrap();
+            db.set_limbo_warrant_sys_validation_status(&hash, status)
+                .await
+                .unwrap();
+            assert!(db.as_ref().get_warrant(hash).await.unwrap().is_none());
+        }
 
         let by_warrantee = db
             .as_ref()
             .get_warrants_by_warrantee(warrantee)
             .await
             .unwrap();
-        assert_eq!(by_warrantee.len(), 1);
+        assert_eq!(
+            by_warrantee
+                .into_iter()
+                .map(|row| row.hash)
+                .collect::<Vec<_>>(),
+            vec![newer.get_raw_36().to_vec(), older.get_raw_36().to_vec()]
+        );
     }
 
     #[tokio::test]
-    async fn warrants_by_author_and_op_validation_status() {
+    async fn warrants_by_author_any_status_and_op_validation_status() {
         let db = test_open_db(dht_db_id()).await.unwrap();
         let author_a = AgentPubKey::from_raw_36(vec![3u8; 36]);
         let author_b = AgentPubKey::from_raw_36(vec![5u8; 36]);

@@ -13,9 +13,7 @@ edition = "2021"
 # FIELD-TEST-ONLY dependency redirection: see the note in the workspace Cargo.toml.
 kitsune2_transport_iroh = { git = "https://github.com/lightningrodlabs/kitsune2", rev = "1703ac68aebaf14b173a86dbed4cbaca0d33b736", optional = true, default-features = false }
 derive_more = { version = "2.0", features = ["from"] }
-holo_hash = { version = "^0.7.1", path = "../holo_hash", features = [
-  "full",
-] }
+holo_hash = { version = "^0.7.1", path = "../holo_hash", features = ["full"] }
 holochain_state_types = { version = "^0.7.1", path = "../holochain_state_types" }
 holochain_serialized_bytes = "=0.0.57"
 holochain_types = { version = "^0.7.1", path = "../holochain_types" }
